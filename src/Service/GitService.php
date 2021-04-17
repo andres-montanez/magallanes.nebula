@@ -13,6 +13,7 @@ class GitService
         $sshKey = tempnam('/tmp', 'mgk_');
         file_put_contents($sshKey, $build->getEnvironment()->getProject()->getRepositorySSHKey());
         chmod($sshKey, 0600);
+        umask(0022);
 
         // Git SSH options
         $gitSSHOptions = ['GIT_SSH_COMMAND' => sprintf('ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no', $sshKey)];
