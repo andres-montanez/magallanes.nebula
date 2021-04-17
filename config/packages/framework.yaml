@@ -11,6 +11,8 @@ framework:
         cookie_secure: auto
         cookie_samesite: lax
 
+    trusted_proxies: '%env(TRUSTED_PROXIES)%'
+
     #esi: true
     #fragments: true
     php_errors:

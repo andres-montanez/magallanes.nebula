@@ -22,7 +22,6 @@ class SSHService
         $connection = ssh2_connect($configuration['host'], $port);
         ssh2_auth_pubkey_file($connection, $configuration['user'], $sshPublicKey, $sshKey);
 
-        var_dump($configuration['cmd']);
         $stream = ssh2_exec($connection, $configuration['cmd']);
 
         $streamIO = ssh2_fetch_stream($stream, SSH2_STREAM_STDIO);
