@@ -1,0 +1,217 @@
+{% extends 'base.html.twig' %}
+
+{% block pageTitle %}Build #{{ build.number }} for {{ environment.name}} @ {{ project.name }}{% endblock %}
+{% block pageName %}
+    Build #{{ build.number }} for {{ environment.name}} @ {{ project.name }}
+    <br />
+    <sub>
+        <code>Id: {{ build.id }}</code>
+    </sub>
+{% endblock %}
+
+{% block pageContent %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="row">
+            {# Stages #}
+            <div class="col-md-12">
+                <div class="card card-with-icon">
+                    <div class="card-header card-header-warning card-header-icon">
+                        <div class="card-icon">
+                            <i class="material-icons">build</i>
+                        </div>
+                        <h3 class="card-title">Build Stages</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <tbody>
+                                {% for stage in build.stages %}
+                                    <tr id="stage-{{ stage.id }}">
+                                        <td width="30">
+                                        {% if stage.status == constant('App\\Entity\\BuildStage::STATUS_FAILED') %}
+                                            <i class="material-icons text-danger" title="Failed">cancel</i>
+                                        {% elseif stage.status == constant('App\\Entity\\BuildStage::STATUS_SUCCESSFUL') %}
+                                            <i class="material-icons text-success" title="Successful">check_circle</i>
+                                        {% elseif stage.status == constant('App\\Entity\\BuildStage::STATUS_RUNNING') %}
+                                            <i class="material-icons text-warning in-progress" title="In progress">autorenew</i>
+                                        {% elseif stage.status == constant('App\\Entity\\BuildStage::STATUS_PENDING') %}
+                                            <i class="material-icons text-info" title="Pending">hourglass_empty</i>
+                                        {% else %}
+                                            <i class="material-icons text-info" title="Unknown">help</i>
+                                        {% endif %}
+
+                                        <td width="30">#{{ loop.index }}</td>
+                                        <td class="font-weight-bold">{{ stage.name }}</td>
+
+                                        <td width="125" style="text-align: right">
+                                            {% if stage.elapsedTime is not null %}
+                                                <code>{{ stage.elapsedTime }}</code>
+                                            {% endif %}
+                                        </td>
+
+                                        <td width="50">
+                                            <button type="button" class="btn btn-success btn-sm" data-view-logs="yes" data-source="{{ path('mage_build_logs', { 'id': build.id, 'type': 'checkout' }) }}" data-title="Checkout output logs">
+                                                <i class="material-icons">article</i>
+                                            </button>
+                                        </td>
+
+                                        <td width="50">
+                                            <button type="button" class="btn btn-danger btn-sm" data-view-logs="yes" data-source="{{ path('mage_build_logs', { 'id': build.id, 'type': 'checkout-error' }) }}" data-title="Checkout error logs">
+                                                <i class="material-icons">bug_report</i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="row">
+            {# Summary card #}
+            <div class="col-md-6">
+                <div class="card card-with-icon">
+                    <div class="card-header card-header-primary card-header-icon">
+                        <div class="card-icon">
+                            <i class="fa fa-cubes"></i>
+                        </div>
+                        <h3 class="card-title">
+                            Build <code>#{{ build.number }}</code>
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <h4 class="card-title">Status: <code>{{ build.status|title }}</code></h4>
+                        <h4 class="card-title">Created: <code>{{ build.createdAt is not null ? build.createdAt|date('Y-m-d H:i') : 'N/A' }}</code></h4>
+                        <h4 class="card-title">Started: <code>{{ build.startedAt is not null ? build.startedAt|date('Y-m-d H:i') : 'N/A' }}</code></h4>
+                        <h4 class="card-title">Finished: <code>{{ build.finishedAt is not null ? build.finishedAt|date('Y-m-d H:i') : 'N/A' }}</code></h4>
+                    </div>
+                    <div class="card-footer text-muted">
+                        {% if build.elapsedTime is not null %}
+                            <code>{{ build.elapsedTime }}</code>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {# Checkout card #}
+            <div class="col-md-6">
+                <div class="card card-with-icon">
+                    <div class="card-header card-header-info card-header-icon">
+                        <div class="card-icon">
+                            <i class="fa fa-git"></i>
+                        </div>
+                        <h3 class="card-title">Checkout</h3>
+                    </div>
+                    <div class="card-body">
+                        <h4 class="card-title">Status: <code>{{ get_build_checkout_status(build) }}</code></h4>
+                        <h4 class="card-title">Repository: <code title="{{ project.repository }}">{{ get_repository_name(project.repository) }}</code></h4>
+                        <h4 class="card-title">Branch/Tag: <code>{{ build.branch }}</code></h4>
+                        <h4 class="card-title">Commit: <code title="{{ build.commitHash }}">{{ build.commitShortHash ?: 'N/A' }}</code></h4>
+
+                        {% if build.status != constant('App\\Entity\\Build::STATUS_PENDING') %}
+                            <button type="button" class="btn btn-success btn-sm" data-view-logs="yes" data-source="{{ path('mage_build_logs', { 'id': build.id, 'type': 'checkout' }) }}" data-title="Checkout output logs">
+                                <i class="material-icons">article</i>
+                                View logs
+                            </button>
+
+                            <button type="button" class="btn btn-danger btn-sm" data-view-logs="yes" data-source="{{ path('mage_build_logs', { 'id': build.id, 'type': 'checkout-error' }) }}" data-title="Checkout error logs">
+                                <i class="material-icons">bug_report</i>
+                                View error logs
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {# Packaging card #}
+            <div class="col-md-6">
+                <div class="card card-with-icon">
+                    <div class="card-header card-header-rose card-header-icon">
+                        <div class="card-icon">
+                            <i class="fa fa-truck"></i>
+                        </div>
+                        <h3 class="card-title">Packaging & Release</h3>
+                    </div>
+                    <div class="card-body">
+                        <h4 class="card-title">Package: <code>{{ get_build_package_status(build) }}</code></h4>
+                        <h4 class="card-title">Release: <code>{{ get_build_release_status(build) }}</code></h4>
+
+                        {% if build.status != constant('App\\Entity\\Build::STATUS_PENDING') %}
+                            <button type="button" class="btn btn-success btn-sm" data-view-logs="yes" data-source="{{ path('mage_build_logs', { 'id': build.id, 'type': 'checkout' }) }}" data-title="Checkout output logs">
+                                <i class="material-icons">article</i>
+                                View logs
+                            </button>
+
+                            <button type="button" class="btn btn-danger btn-sm" data-view-logs="yes" data-source="{{ path('mage_build_logs', { 'id': build.id, 'type': 'checkout-error' }) }}" data-title="Checkout error logs">
+                                <i class="material-icons">bug_report</i>
+                                View error logs
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {# Environment vars card #}
+            <div class="col-md-6">
+                <div class="card card-with-icon">
+                    <div class="card-header card-header-terminal card-header-icon">
+                        <div class="card-icon">
+                            <i class="fa fa-terminal"></i>
+                        </div>
+                        <h3 class="card-title">Env Vars</h3>
+                    </div>
+                    <div class="card-body">
+                        {% for key, value in build.config.envVars %}
+                            <div>
+                                <code>{{ key }} : {{ value }}</code>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="view-logs-modal" tabindex="-1" role="dialog" aria-labelledby="view-logs-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="view-logs-modal-title">type of logs</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <code></code>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block javascript %}
+<script>
+$('[data-view-logs="yes"]').on('click', function(event) {
+    $('#view-logs-modal-title').text($(this).data('title'));
+    $.ajax({
+        url: $(this).data('source'),
+        method: 'GET',
+        dataType: 'json',
+        success: function(response) {
+            $('#view-logs-modal .modal-body code').text(response.logs);
+            $('#view-logs-modal').modal({});
+        }
+    });
+});
+
+</script>
+{% endblock %}

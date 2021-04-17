@@ -1,0 +1,67 @@
+{% extends 'base.html.twig' %}
+
+{% block pageTitle %}{{ user is defined ? user.name : 'New user' }}{% endblock %}
+{% block pageName %}{% if user is defined  %}User: {{ user.name }}{% else %}New user{% endif %}{% endblock %}
+
+{% block pageContent %}
+{{ form_start(form) }}
+    <div class="row">
+        {% if not form.vars.valid %}
+            <div class="col-md-12">
+                <div class="alert alert-danger" role="alert">
+                    {% for child in form.children %}
+                        {{ form_errors(child) }}
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header card-header-primary">
+                    <h4 class="card-title">User profile: {{ user is defined ? user.name : 'New user' }}</h4>
+                    <p class="card-category">Fill out the user profile</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="bmd-label-floating {{ form.username.vars.errors|length ? 'has-error' : '' }}">Username</label>
+                                {{ form_widget(form.username) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="bmd-label-floating {{ form.password.vars.errors|length ? 'has-error' : '' }}">Password</label>
+                                {{ form_widget(form.password) }}
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="bmd-label-floating {{ form.name.vars.errors|length ? 'has-error' : '' }}">Name</label>
+                                {{ form_widget(form.name) }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="bmd-label-floating {{ form.roles.vars.errors|length ? 'has-error' : '' }}">Roles</label>
+                                {{ form_widget(form.roles) }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="bmd-label-floating {{ form.groups.vars.errors|length ? 'has-error' : '' }}">Groups</label>
+                                {{ form_widget(form.groups) }}
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary pull-right">Save</button>
+                    <div class="clearfix"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{ form_rest(form) }}
+</form>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends 'base.html.twig' %}
+
+{% block pageTitle %}{{ group is defined ? group.name : 'New group' }}{% endblock %}
+{% block pageName %}{% if group is defined  %}Group: {{ group.name }}{% else %}New group{% endif %}{% endblock %}
+
+{% block pageContent %}
+{{ form_start(form) }}
+    <div class="row">
+        {% if not form.vars.valid %}
+            <div class="col-md-12">
+                <div class="alert alert-danger" role="alert">
+                    {% for child in form.children %}
+                        {{ form_errors(child) }}
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header card-header-primary">
+                    <h4 class="card-title">Group: {{ group is defined ? group.name : 'New group' }}</h4>
+                    <p class="card-category">Fill out the group info</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label class="bmd-label-floating {{ form.name.vars.errors|length ? 'has-error' : '' }}">Name</label>
+                                {{ form_widget(form.name) }}
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label class="bmd-label-floating {{ form.description.vars.errors|length ? 'has-error' : '' }}">Description</label>
+                                {{ form_widget(form.description) }}
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary pull-right">Save</button>
+                    <div class="clearfix"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{ form_rest(form) }}
+</form>
+{% endblock %}

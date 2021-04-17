@@ -1,0 +1,111 @@
+#!/bin/bash
+
+ORIGIN_PWD=$(pwd)
+DOCKER_PWD='infra/docker'
+DOCKER_PROJECT='nebula'
+DOCKER_CONTAINER_DB='nebula-dbserver'
+DOCKER_CONTAINER_PHP='nebula-php'
+DOCKER_CONTAINER_WEB='nebula-web'
+DOCKER_CONTAINER_WORKER='nebula-worker'
+
+docker_build() {
+    EXTRA_PARAMS=''
+    if [ "$1" == "no-cache" ] ; then
+        EXTRA_PARAMS='--no-cache'
+    fi
+
+    cd $DOCKER_PWD
+
+    docker-compose build --pull $EXTRA_PARAMS
+
+    cd $ORIGIN_PWD
+
+    if [ "$(type -t custom_builds)" == "function" ] ; then
+        custom_builds
+    fi
+}
+
+docker_up() {
+    cd $DOCKER_PWD
+
+    docker-compose -p $DOCKER_PROJECT up -d
+
+    cd $ORIGIN_PWD
+}
+
+docker_down() {
+    cd $DOCKER_PWD
+
+    docker-compose -p $DOCKER_PROJECT down
+
+    cd $ORIGIN_PWD
+}
+
+docker_restart() {
+    cd $DOCKER_PWD
+
+    docker-compose -p $DOCKER_PROJECT down
+    docker-compose -p $DOCKER_PROJECT up -d
+
+    cd $ORIGIN_PWD
+}
+
+docker_db() {
+    docker exec -it $DOCKER_CONTAINER_DB mysql $1
+}
+
+docker_db_load() {
+    docker exec -i $DOCKER_CONTAINER_DB mysql $1
+}
+
+docker_php() {
+    docker exec -it $DOCKER_CONTAINER_PHP bash
+}
+
+docker_web() {
+    docker exec -it $DOCKER_CONTAINER_WEB bash
+}
+
+docker_worker() {
+    docker exec -it $DOCKER_CONTAINER_WORKER bash
+}
+
+case $1 in
+    "build")
+        docker_build $2
+    ;;
+
+    "up")
+        docker_up
+    ;;
+
+    "down")
+        docker_down
+    ;;
+
+    "restart")
+        docker_restart
+    ;;
+
+    "db")
+        docker_db $2
+    ;;
+
+    "db-load")
+        docker_db_load $2
+    ;;
+
+    "php")
+        docker_php
+    ;;
+
+    "worker")
+        docker_worker
+    ;;
+
+    "web")
+        docker_web
+    ;;
+esac
+
+exit 0

@@ -1,0 +1,47 @@
+security:
+    encoders:
+        App\Entity\User: 'auto'
+
+    providers:
+        users:
+            entity:
+                class: 'App\Entity\User'
+                property: 'username'
+
+    firewalls:
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+        main:
+            anonymous: true
+            lazy: true
+            provider: users
+            guard:
+                authenticators:
+                    - App\Security\LoginFormAuthenticator
+            logout:
+                path: mage_logout
+                target: /login
+
+    access_control:
+        - { path: ^/login, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+        #- { path: ^/, roles: ROLE_ADMIN }
+
+    role_hierarchy:
+        ROLE_ADMINISTRATOR:
+            - ROLE_USER
+            - ROLE_PROJECT_NEW
+            - ROLE_PROJECT_EDIT
+            - ROLE_PROJECT_DELETE
+            - ROLE_ENVIRONMENT_ADD
+            - ROLE_ENVIRONMENT_EDIT
+            - ROLE_ENVIRONMENT_DELETE
+            - ROLE_USER_LIST
+            - ROLE_USER_NEW
+            - ROLE_USER_EDIT
+            - ROLE_USER_DELETE
+            - ROLE_USER_GROUP_NEW
+            - ROLE_USER_GROUP_EDIT
+            - ROLE_USER_GROUP_DELETE
+        ROLE_USER:
+            - ROLE_PROJECT_LIST

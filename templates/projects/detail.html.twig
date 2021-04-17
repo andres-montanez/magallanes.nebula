@@ -1,0 +1,97 @@
+{% extends 'base.html.twig' %}
+
+{% block pageTitle %}{{ project is defined ? project.name : 'New project' }}{% endblock %}
+{% block pageName %}{% if project is defined  %}Project: {{ project.name }}{% else %}New project{% endif %}{% endblock %}
+
+{% block pageContent %}
+{{ form_start(form) }}
+    <div class="row">
+        {% if not form.vars.valid %}
+            <div class="col-md-12">
+                <div class="alert alert-danger" role="alert">
+                    {% for child in form.children %}
+                        {{ form_errors(child) }}
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header card-header-primary">
+                    <h4 class="card-title">Settings for Project: {{ project is defined ? project.name : 'New project' }}</h4>
+                    <p class="card-category">Fill out the project settings</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                <label class="bmd-label-floating {{ form.name.vars.errors|length ? 'has-error' : '' }}">Name</label>
+                                {{ form_widget(form.name) }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="bmd-label-floating {{ form.code.vars.errors|length ? 'has-error' : '' }}">Code</label>
+                                {{ form_widget(form.code) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label class="bmd-label-floating {{ form.description.vars.errors|length ? 'has-error' : '' }}">Description</label>
+                                {{ form_widget(form.description) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label>Configuration</label>
+                                <div class="form-group">
+                                    <label class="bmd-label-floating {{ form.config.vars.errors|length ? 'has-error' : '' }}"> Make sure your YAML is correct</label>
+                                    {{ form_widget(form.config) }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary pull-right">Save</button>
+                    <div class="clearfix"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card card-with-icon">
+                <div class="card-header card-header-info card-header-icon">
+                    <div class="card-icon">
+                        <i class="fa fa-git"></i>
+                    </div>
+                    <h3 class="card-title">Repository configuration</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label class="bmd-label-floating {{ form.repository.vars.errors|length ? 'has-error' : '' }}">Repository</label>
+                                {{ form_widget(form.repository) }}
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label>Repository SSH Key </label>
+                                <div class="form-group">
+                                    <label class="bmd-label-floating {{ form.repositorySSHKey.vars.errors|length ? 'has-error' : '' }}"> Deployment key able to clone the repository.</label>
+                                    {{ form_widget(form.repositorySSHKey) }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="clearfix"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{ form_rest(form) }}
+</form>
+{% endblock %}

@@ -1,0 +1,48 @@
+version: '2'
+services:
+    web:
+        container_name: nebula-web
+        image: nebula-web
+        build: ./web
+        links:
+            - php
+        volumes_from:
+            - php
+        ports:
+            - "80:80"
+        network_mode: bridge
+    php:
+        container_name: nebula-php
+        image: nebula-php
+        build: ./php
+        volumes:
+            - ${APP_DIR}:/home/app:cached
+            - ${MAGALLANES_HOME}:/home/magallanes:cached
+        links:
+            - dbserver
+        network_mode: bridge
+    worker:
+        container_name: nebula-worker
+        image: nebula-worker
+        build: ./worker
+        volumes:
+            - ${APP_DIR}:/home/app:cached
+            - ${MAGALLANES_HOME}:/home/magallanes:cached
+            - ${MAGALLANES_DOCKER_SOCKET}:/var/run/docker.sock
+        links:
+            - dbserver
+        environment:
+            - MAGALLANES_WORKERS_DEPLOYER=${MAGALLANES_WORKERS_DEPLOYER}
+        network_mode: bridge
+    dbserver:
+        container_name: nebula-dbserver
+        image: nebula-dbserver
+        build: ./dbserver
+        ports:
+            - ${PORT_DB}:3306
+        volumes:
+            - ${APP_DB}:/var/lib/mysql
+        environment:
+            MYSQL_ALLOW_EMPTY_PASSWORD: 1
+        network_mode: bridge
+

@@ -1,0 +1,5 @@
+[mysqld]
+
+general_log_file        = /var/log/mysql/mysql.log
+general_log             = 1
+innodb_log_file_size    = 1G

@@ -1,0 +1,74 @@
+.logo {
+    text-align: center;
+}
+.logo-image {
+    width: 150px;
+}
+
+.in-progress {
+    animation: rotator 3s linear infinite;
+}
+
+@keyframes rotator {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+textarea.is-code {
+    font-size: 0.8em;
+    font-family: monospace;
+}
+
+.is-sensitive {
+    filter: blur(2px);
+}
+
+.is-focused .is-sensitive {
+    filter: blur(0) !important;
+}
+
+.mage-env-build-number {
+    font-weight: bold !important;
+}
+
+.mage-env-build-status {
+    text-transform: capitalize;
+}
+
+.mage-build-detail-status {
+    text-transform: capitalize;
+}
+
+.mage-build-detail-stage-number {
+    text-align: right;
+}
+
+.mage-build-detail-checkout-link {
+    font-size: 1em;
+}
+
+.card-with-icon .card-header.card-header-icon i {
+    font-size: 36px;
+    line-height: 56px;
+    width: 56px;
+    height: 56px;
+    text-align: center;
+}
+
+.card-with-icon .card-header.card-header-icon h3 {
+    text-align: right;
+}
+
+.card-icon-terminal {
+    background-color: #222;
+}
+
+.dark-edition .card .card-header-terminal .card-icon,
+.dark-edition .card .card-header-terminal .card-text,
+.dark-edition .card .card-header-terminal:not(.card-header-icon):not(.card-header-text),
+.dark-edition .card.bg-terminal,
+.dark-edition .card.card-rotate.bg-terminalo .front,
+.dark-edition .card.card-rotate.bg-terminal .back {
+    background: linear-gradient(60deg, #222, #1a1a1a);
+    color: #00ee00;
+}

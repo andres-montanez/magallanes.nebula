@@ -1,0 +1,18 @@
+{% extends 'base.html.twig' %}
+
+{% block pageTitle %}Build #{{ build.number }} for {{ environment.name}} @ {{ project.name }}{% endblock %}
+{% block pageName %}
+    Build #{{ build.number }} for {{ environment.name}} @ {{ project.name }}
+    <br />
+    <sub>
+        <code>Id: {{ build.id }}</code>
+    </sub>
+{% endblock %}
+
+{% block pageContent %}
+    <div id="mage-build-detail" data-url="{{ path('mage_api_build_detail', {'id': build.id}) }}"></div>
+{% endblock %}
+
+{% block javascript %}
+<script type="text/babel" src="{{ asset('assets/js/build.js') }}"></script>
+{% endblock %}
