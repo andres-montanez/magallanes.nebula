@@ -45,13 +45,9 @@ class SSHService
         // Deploy SSH Key
         $sshKey = tempnam('/tmp', 'mgk_');
         $sshPublicKey = sprintf('%s.pub', $sshKey);
+        file_put_contents($sshPublicKey, $environment->getSSHPublicKey());
         file_put_contents($sshKey, $environment->getSSHKey());
         chmod($sshKey, 0600);
-
-        // Create Public Key
-        $process = new Process(['ssh-keygen', '-y', '-f', $sshKey]);
-        $process->run();
-        file_put_contents($sshPublicKey, trim($process->getOutput()));
 
         return $sshKey;
     }

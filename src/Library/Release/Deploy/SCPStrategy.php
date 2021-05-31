@@ -13,21 +13,22 @@ class SCPStrategy
         $sshKey = tempnam('/tmp', 'mgk_');
         $sshPublicKey = sprintf('%s.pub', $sshKey);
         file_put_contents($sshKey, $build->getEnvironment()->getSSHKey());
+        file_put_contents($sshPublicKey, $build->getEnvironment()->getSSHPublicKey());
         chmod($sshKey, 0600);
-
-        // Create Public Key
-        $process = new Process(['ssh-keygen', '-y', '-f', $sshKey]);
-        $process->run();
-        file_put_contents($sshPublicKey, trim($process->getOutput()));
 
         $logs = [];
         $connections = [];
 
         // Connect & Authenticate
         foreach ($deployOptions['hosts'] as $host) {
+            $port = 22;
+            if (strpos($host, ':') > 0) {
+                list($host, $port) = explode(':', $host, 2);
+            }
+
             $logs[$host] = [];
-            $connections[$host] = ssh2_connect($host, 22);
-            ssh2_auth_pubkey_file($connections[$host], 'root', $sshPublicKey, $sshKey);
+            $connections[$host] = ssh2_connect($host, $port);
+            ssh2_auth_pubkey_file($connections[$host], $deployOptions['user'], $sshPublicKey, $sshKey);
         }
 
         $releaseDirectory = sprintf('%s/%d', rtrim($deployOptions['path'], '/'), $build->getNumber());
@@ -57,12 +58,8 @@ class SCPStrategy
         $sshKey = tempnam('/tmp', 'mgk_');
         $sshPublicKey = sprintf('%s.pub', $sshKey);
         file_put_contents($sshKey, $build->getEnvironment()->getSSHKey());
+        file_put_contents($sshPublicKey, $build->getEnvironment()->getSSHPublicKey());
         chmod($sshKey, 0600);
-
-        // Create Public Key
-        $process = new Process(['ssh-keygen', '-y', '-f', $sshKey]);
-        $process->run();
-        file_put_contents($sshPublicKey, trim($process->getOutput()));
 
         $logs = [];
         $connections = [];
