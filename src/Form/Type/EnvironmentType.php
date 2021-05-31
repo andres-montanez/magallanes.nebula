@@ -55,6 +55,14 @@ class EnvironmentType extends AbstractType
                     'spellcheck' => 'false'
                 ]
             ])
+            ->add('sshPublicKey', TextareaType::class, [
+                'required' => false,
+                'attr' => [
+                    'class' => 'form-control is-code',
+                    'rows' => 2,
+                    'spellcheck' => 'false'
+                ]
+            ])
         ;
     }
 

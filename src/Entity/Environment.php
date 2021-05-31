@@ -75,6 +75,12 @@ class Environment
      */
     protected ?string $sshKey = null;
 
+    /**
+     * @ORM\Column(name="environment_ssh_public_key", type="text", nullable=true)
+     * @Assert\NotBlank(allowNull=true)
+     */
+    protected ?string $sshPublicKey = null;
+
     public function getId(): string
     {
         return $this->id;
@@ -154,6 +160,17 @@ class Environment
     public function setSSHKey(?string $sshKey): self
     {
         $this->sshKey = $sshKey;
+        return $this;
+    }
+
+    public function getSSHPublicKey(): ?string
+    {
+        return $this->sshPublicKey;
+    }
+
+    public function setSSHPublicKey(?string $sshPublicKey): self
+    {
+        $this->sshPublicKey = $sshPublicKey;
         return $this;
     }
 }

@@ -117,6 +117,15 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label> SSH Public Key</label>
+                                        <div class="form-group">
+                                            <label class="bmd-label-floating {{ form.sshPublicKey.vars.errors|length ? 'has-error' : '' }}"> Public Key for SSH connection (if needed)</label>
+                                            {{ form_widget(form.sshPublicKey) }}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="clearfix"></div>
                         </div>

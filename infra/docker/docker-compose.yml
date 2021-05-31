@@ -16,8 +16,8 @@ services:
         image: nebula-php
         build: ./php
         volumes:
-            - ${APP_DIR}:/home/app:cached
-            - ${MAGALLANES_HOME}:/home/magallanes:cached
+            - ${APP_DIR}:/home/app:delegated
+            - ${MAGALLANES_HOME}:/home/magallanes:delegated
         links:
             - dbserver
         network_mode: bridge
@@ -26,8 +26,8 @@ services:
         image: nebula-worker
         build: ./worker
         volumes:
-            - ${APP_DIR}:/home/app:cached
-            - ${MAGALLANES_HOME}:/home/magallanes:cached
+            - ${APP_DIR}:/home/app:delegated
+            - ${MAGALLANES_HOME}:/home/magallanes:delegated
             - ${MAGALLANES_DOCKER_SOCKET}:/var/run/docker.sock
         links:
             - dbserver
