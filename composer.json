@@ -1,15 +1,10 @@
 {
+    "name": "andres-montanez/magallanes.nebula",
+    "description": "Magallanes Nebula - Deployment tool for the DevOps on a hurry",
     "type": "project",
     "license": "proprietary",
     "minimum-stability": "dev",
     "prefer-stable": true,
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/theofidry/AliceBundle",
-            "no-api": true
-        }
-    ],
     "require": {
         "php": ">=7.4",
         "ext-ctype": "*",
