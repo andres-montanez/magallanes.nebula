@@ -2,8 +2,6 @@ infra/docker/.env
 infra/database
 
 ###> symfony/framework-bundle ###
-/.env
-/.env.test
 /.env.local
 /.env.local.php
 /.env.*.local
@@ -14,7 +12,6 @@ infra/database
 ###< symfony/framework-bundle ###
 
 ###> symfony/phpunit-bridge ###
-.phpunit
 .phpunit.result.cache
 /phpunit.xml
 ###< symfony/phpunit-bridge ###
