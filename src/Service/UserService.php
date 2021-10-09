@@ -4,17 +4,18 @@ namespace App\Service;
 
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
 
 class UserService
 {
     protected EntityManagerInterface $entityManager;
-    protected UserPasswordEncoderInterface $passwordEncoder;
+    protected UserPasswordHasherInterface $passwordHasher;
 
-    public function __construct(EntityManagerInterface $entityManager, UserPasswordEncoderInterface $passwordEncoder)
+    public function __construct(EntityManagerInterface $entityManager, UserPasswordHasherInterface $passwordHasher)
     {
         $this->entityManager = $entityManager;
-        $this->passwordEncoder = $passwordEncoder;
+        $this->passwordHasher = $passwordHasher;
     }
 
     /**
@@ -39,6 +40,6 @@ class UserService
 
     public function encodePassword(User $user, string $plainPassword): string
     {
-        return $this->passwordEncoder->encodePassword($user, $plainPassword);
+        return $this->passwordHasher->hashPassword($user, $plainPassword);
     }
 }

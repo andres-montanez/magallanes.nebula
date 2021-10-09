@@ -1,6 +1,10 @@
 security:
-    encoders:
-        App\Entity\User: 'auto'
+    # https://symfony.com/doc/current/security/experimental_authenticators.html
+    enable_authenticator_manager: true
+
+    password_hashers:
+        App\Entity\User:
+            algorithm: auto
 
     providers:
         users:
@@ -13,12 +17,10 @@ security:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
         main:
-            anonymous: true
             lazy: true
             provider: users
-            guard:
-                authenticators:
-                    - App\Security\LoginFormAuthenticator
+            custom_authenticators:
+                - App\Security\LoginFormAuthenticator
             logout:
                 path: mage_logout
                 target: /login

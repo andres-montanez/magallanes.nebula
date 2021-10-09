@@ -7,13 +7,14 @@ use Symfony\Component\Validator\Constraints as Assert;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Security\Core\User\LegacyPasswordAuthenticatedUserInterface;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 
 /**
  * @ORM\Entity()
  * @ORM\Table(name="user")
- * )
  */
-class User implements UserInterface
+class User implements UserInterface, PasswordAuthenticatedUserInterface, LegacyPasswordAuthenticatedUserInterface
 {
     public const ROLE_ADMINISTRATOR = 'ROLE_ADMINISTRATOR';
     public const ROLE_USER = 'ROLE_USER';
@@ -84,6 +85,11 @@ class User implements UserInterface
     }
 
     public function getUsername(): string
+    {
+        return $this->username;
+    }
+
+    public function getUserIdentifier(): string
     {
         return $this->username;
     }
