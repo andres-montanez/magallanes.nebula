@@ -15,23 +15,15 @@ class DockerService
         $image = EnvVars::replace($step->getStage()->getDocker(), $envVars);
         $client = new CurlHttpClient(['bindto' => $this->socket]);
 
-        // Check if image is available
-        $filter = ['reference' => [$image => true]];
+        // Pull image
         $response = $client->request(
-            'GET',
-            $this->getUrl('/images/json?filters=' . rawurlencode(json_encode($filter))),
+            'POST',
+            $this->getUrl('/images/create?fromImage=' . $image),
+            [
+                'timeout' => 300
+            ]
         );
-        $response = json_decode($response->getContent(false), true);
-        if (count($response) === 0) {
-            // Pull image
-            $response = $client->request(
-                'POST',
-                $this->getUrl('/images/create?fromImage=$image'),
-                [
-                    'timeout' => 300
-                ]
-            );
-        }
+        $pullLog = $response->getContent(false);
 
         // Prepare options
         $name = sprintf('mage_%d', time());

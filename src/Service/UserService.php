@@ -27,6 +27,15 @@ class UserService
         return $repository->findBy([], ['name' => 'ASC']);
     }
 
+    /**
+     * @return User|null
+     */
+    public function getByUsername(string $username): ?User
+    {
+        $repository = $this->entityManager->getRepository(User::class);
+        return $repository->findOneBy(['username' => $username]);
+    }
+
     public function create(User $user)
     {
         $this->entityManager->persist($user);
