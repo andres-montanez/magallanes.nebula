@@ -43,13 +43,13 @@
                         <p>Dashboard</p>
                     </a>
                 </li>
-                <li class="nav-item active ">
+                <li class="nav-item {{ menu_active(path('mage_projects'), app.request.pathInfo) }}">
                     <a class="nav-link" href="{{ path('mage_projects') }}">
                         <i class="material-icons">ballot</i>
                         <p>Projects</p>
                     </a>
                 </li>
-                <li class="nav-item ">
+                <li class="nav-item {{ menu_active(path('mage_users'), app.request.pathInfo) }}">
                     <a class="nav-link" href="{{ path('mage_users') }}">
                         <i class="material-icons">groups</i>
                         <p>Users & Groups</p>
