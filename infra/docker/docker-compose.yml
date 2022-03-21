@@ -10,7 +10,6 @@ services:
             - php
         ports:
             - "80:80"
-        network_mode: bridge
     php:
         container_name: nebula-php
         image: nebula-php
@@ -20,7 +19,6 @@ services:
             - ${MAGALLANES_HOME}:/home/magallanes:delegated
         links:
             - dbserver
-        network_mode: bridge
     worker:
         container_name: nebula-worker
         image: nebula-worker
@@ -33,7 +31,6 @@ services:
             - dbserver
         environment:
             - MAGALLANES_WORKERS_DEPLOYER=${MAGALLANES_WORKERS_DEPLOYER}
-        network_mode: bridge
     dbserver:
         container_name: nebula-dbserver
         image: nebula-dbserver
@@ -44,5 +41,3 @@ services:
             - ${APP_DB}:/var/lib/mysql
         environment:
             MYSQL_ALLOW_EMPTY_PASSWORD: 1
-        network_mode: bridge
-

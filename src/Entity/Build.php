@@ -6,6 +6,7 @@ use App\Library\Build\Config;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Uid\Uuid;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -33,8 +34,9 @@ class Build
 
     /**
      * @ORM\Id()
-     * @ORM\GeneratedValue(strategy="UUID")
-     * @ORM\Column(name="build_id", type="string", length=36, nullable=false)
+     * @ORM\Column(name="build_id", type="string", length="32", unique=true)
+     * @ORM\GeneratedValue(strategy="CUSTOM")
+     * @ORM\CustomIdGenerator(class="doctrine.uuid_generator")
      */
     protected ?string $id = null;
 

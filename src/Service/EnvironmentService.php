@@ -2,24 +2,34 @@
 
 namespace App\Service;
 
-use App\Entity\Build;
 use App\Entity\Project;
 use App\Entity\Environment;
 use Doctrine\ORM\EntityManagerInterface;
 
-class EnvironmentService
+final class EnvironmentService
 {
-    protected EntityManagerInterface $entityManager;
-
-    public function __construct(EntityManagerInterface $entityManager)
+    public function __construct(private SSHService $sshService, private EntityManagerInterface $entityManager)
     {
-        $this->entityManager = $entityManager;
+    }
+
+    private function getEntityManager(): EntityManagerInterface
+    {
+        return $this->entityManager;
+    }
+
+    private function getSSHService(): SSHService
+    {
+        return $this->sshService;
     }
 
     public function create(Environment $environment)
     {
-        $this->entityManager->persist($environment);
-        $this->entityManager->flush();
+        $key = $this->getSSHService()->generateEnvironmentKey($environment);
+        $environment->setSSHPrivateKey($key->getPrivate());
+        $environment->setSSHPublicKey($key->getPublic());
+
+        $this->getEntityManager()->persist($environment);
+        $this->getEntityManager()->flush();
     }
 
     public function update(Environment $environment)
@@ -30,7 +40,7 @@ class EnvironmentService
     /**
      * @return Environment[]
      */
-    public function getEnvironments(Project $project): array
+    public function getCollection(Project $project): array
     {
         return $this->entityManager->getRepository(Environment::class)->findBy(
             ['project' => $project],
@@ -38,56 +48,11 @@ class EnvironmentService
         );
     }
 
-    /**
-     * @return Build[]
-     */
-    public function getBuilds(Environment $environment): array
+    public function get(Project $project, string $id): ?Environment
     {
-        return $this->entityManager->getRepository(Build::class)->findBy(
-            ['environment' => $environment],
-            ['number' => 'DESC']
-        );
-    }
-
-    public function getLastSuccessful(Environment $environment): ?Build
-    {
-        /** @var Build $build */
-        $build = $this->entityManager->getRepository(Build::class)->findOneBy(
-            [
-                'environment' => $environment,
-                'status' =>  Build::STATUS_SUCCESSFUL
-            ],
-            ['number' => 'DESC']
-        );
-
-        return $build;
-    }
-
-    public function getLastFailed(Environment $environment): ?Build
-    {
-        /** @var Build $build */
-        $build = $this->entityManager->getRepository(Build::class)->findOneBy(
-            [
-                'environment' => $environment,
-                'status' =>  Build::STATUS_FAILED
-            ],
-            ['number' => 'DESC']
-        );
-
-        return $build;
-    }
-
-    public function getRunning(Environment $environment): ?Build
-    {
-        /** @var Build $build */
-        $build = $this->entityManager->getRepository(Build::class)->findOneBy(
-            [
-                'environment' => $environment,
-                'finishedAt' =>  null
-            ],
-            ['number' => 'DESC']
-        );
-
-        return $build;
+        return $this->entityManager->getRepository(Environment::class)->findOneBy([
+            'project' => $project,
+            'id' => $id,
+        ]);
     }
 }

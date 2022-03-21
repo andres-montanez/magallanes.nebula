@@ -4,129 +4,99 @@ namespace App\Controller;
 
 use App\Entity\Project;
 use App\Entity\Environment;
-use App\Form\Type\EnvironmentType;
-use App\Service\DeploymentService;
 use App\Service\EnvironmentService;
-use Symfony\Component\HttpFoundation\JsonResponse;
+use App\Service\ProjectService;
+use App\Exception\InvalidPayloadException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\Security\Core\User\UserInterface;
 
 class EnvironmentController extends AbstractController
 {
-    protected EnvironmentService $environmentService;
-    protected DeploymentService $deploymentService;
-
-    public function __construct(EnvironmentService $environmentService, DeploymentService $deploymentService)
-    {
-        $this->environmentService = $environmentService;
-        $this->deploymentService = $deploymentService;
+    public function __construct(
+        private EnvironmentService $environmentService,
+        private ProjectService $projectService,
+        private SerializerInterface $serializer,
+        private ValidatorInterface $validator
+    ) {
     }
 
-    /**
-     * @Route("/api/environments/{id}", name="mage_api_environments_detail", methods={"GET"})
-     */
-    public function apiDetail(Environment $environment): Response
+    private function getService(): EnvironmentService
     {
-        $this->denyAccessUnlessGranted('ROLE_ENVIRONMENT_EDIT');
-
-        return $this->json($environment, Response::HTTP_OK, [], ['detail']);
+        return $this->environmentService;
     }
 
-    /**
-     * @Route("/api/environments/{id}/builds", name="mage_api_environments_builds", methods={"GET"})
-     */
-    public function apiBuilds(Environment $environment): Response
+    private function getProjectService(): ProjectService
     {
-        $this->denyAccessUnlessGranted('builds', $environment);
-
-        $builds = $this->environmentService->getBuilds($environment);
-
-        return $this->json($builds, Response::HTTP_OK, [], ['env_builds']);
+        return $this->projectService;
     }
 
-    /**
-     * @Route("/environment/new/{id}", name="mage_environment_new")
-     */
-    public function new(Project $project, Request $request): Response
+    private function getSerializer(): SerializerInterface
     {
-        $this->denyAccessUnlessGranted('ROLE_ENVIRONMENT_ADD');
+        return $this->serializer;
+    }
+
+    private function getValidator(): ValidatorInterface
+    {
+        return $this->validator;
+    }
+
+    #[Route('/api/environment/{projectId}', name: 'mage_api_environment_collection', methods: ['GET'])]
+    public function collection(string $projectId): Response
+    {
+        $project = $this->getProjectService()->get($projectId);
+        if (!$project instanceof Project) {
+            throw new NotFoundHttpException(sprintf('Project "%s" not found.', $projectId));
+        }
+
+        $environments = $this->getService()->getCollection($project);
+        return $this->json($environments, Response::HTTP_OK, [], ['groups' => ['environment-list']]);
+    }
+
+    #[Route('/api/environment/{projectId}/{id}', name: 'mage_api_environment_get', methods: ['GET'])]
+    public function get(string $projectId, string $id): Response
+    {
+        $project = $this->getProjectService()->get($projectId);
+        if (!$project instanceof Project) {
+            throw new NotFoundHttpException(sprintf('Project "%s" not found.', $projectId));
+        }
+
+        $environment = $this->getService()->get($project, $id);
+        if (!$environment instanceof Environment) {
+            throw new NotFoundHttpException(sprintf('Environment "%s" not found for requested project.', $id));
+        }
+
+        return $this->json($environment, Response::HTTP_OK, [], ['groups' => ['environment-detail']]);
+    }
+
+    #[Route('/api/environment/{projectId}', name: 'mage_api_environment_post', methods: ['POST'])]
+    public function post(Request $request, string $projectId): Response
+    {
+        $project = $this->getProjectService()->get($projectId);
+        if (!$project instanceof Project) {
+            throw new NotFoundHttpException(sprintf('Project "%s" not found.', $projectId));
+        }
 
         $environment = new Environment();
         $environment->setProject($project);
+        $this->getSerializer()->deserialize(
+            $request->getContent(),
+            Environment::class,
+            'json',
+            [AbstractNormalizer::OBJECT_TO_POPULATE => $environment]
+        );
 
-        $form = $this->createForm(EnvironmentType::class, $environment);
-        $form->handleRequest($request);
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->environmentService->create($environment);
-
-            $this->addFlash('success', sprintf('Environment %s created for %s', $environment->getName(), $project->getName()));
-
-            return $this->redirectToRoute('mage_projects');
+        $errors = $this->getValidator()->validate($environment);
+        if (count($errors) > 0) {
+            throw new InvalidPayloadException('Invalid payload.', $errors);
         }
 
-        return $this->render('environments/detail.html.twig', [
-            'project' => $environment->getProject(),
-            'form' => $form->createView()
-        ]);
-    }
-
-    /**
-     * @Route("/environment/{id}", name="mage_environment_detail")
-     */
-    public function detail(Environment $environment, Request $request): Response
-    {
-        $this->denyAccessUnlessGranted('ROLE_ENVIRONMENT_EDIT');
-
-        $form = $this->createForm(EnvironmentType::class, $environment);
-        $form->handleRequest($request);
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->environmentService->update($environment);
-
-            $this->addFlash('success', sprintf('Environment %s updated for %s', $environment->getName(), $environment->getProject()->getName()));
-
-            return $this->redirectToRoute('mage_projects');
-        }
-
-        return $this->render('environments/detail.html.twig', [
-            'project' => $environment->getProject(),
-            'environment' => $environment,
-            'form' => $form->createView()
-        ]);
-    }
-
-    /**
-     * @Route("/environment/{id}/builds", name="mage_environment_builds")
-     */
-    public function builds(Environment $environment): Response
-    {
-        $this->denyAccessUnlessGranted('builds', $environment);
-
-        return $this->render('environments/builds.html.twig', [
-            'project' => $environment->getProject(),
-            'environment' => $environment,
-        ]);
-    }
-
-    /**
-     * @Route("/environment/{id}/deploy", name="mage_environment_deploy", methods={"POST"})
-     */
-    public function deploy(Environment $environment): Response
-    {
-        $this->denyAccessUnlessGranted('deploy', $environment);
-
-        $requestedBy = null;
-        if ($this->getUser() instanceof UserInterface) {
-            $requestedBy = $this->getUser()->getUsername();
-        }
-
-        $build = $this->deploymentService->request($environment, null, $requestedBy);
-
-        return new JsonResponse([
-            'build_id' => $build->getId(),
-            'build_number' => $build->getNumber()
-        ]);
+        $this->getService()->create($environment);
+        return $this->json($environment, Response::HTTP_OK, [], ['groups' => ['environment-detail']]);
     }
 }

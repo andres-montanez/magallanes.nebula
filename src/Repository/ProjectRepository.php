@@ -26,10 +26,8 @@ class ProjectRepository extends ServiceEntityRepository
     {
         $qb = $this->createQueryBuilder('p');
         $qb
-            ->select('p, e')
-            ->leftJoin('p.environments', 'e')
+            ->select('p')
             ->orderBy('p.name', 'ASC')
-            ->addOrderBy('e.name', 'ASC')
         ;
 
         return $qb->getQuery()->getResult();

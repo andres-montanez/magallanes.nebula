@@ -3,100 +3,77 @@
 namespace App\Controller;
 
 use App\Entity\Project;
-use App\Form\Type\ProjectType;
 use App\Service\ProjectService;
+use App\Exception\InvalidPayloadException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
-class ProjectController extends AbstractController
+final class ProjectController extends AbstractController
 {
-    protected ProjectService $projectService;
-    protected SerializerInterface $serializer;
-
-    public function __construct(ProjectService $projectService, SerializerInterface $serializer)
-    {
-        $this->projectService = $projectService;
-        $this->serializer = $serializer;
+    public function __construct(
+        private ProjectService $projectService,
+        private SerializerInterface $serializer,
+        private ValidatorInterface $validator
+    ) {
     }
 
-    /**
-     * @Route("/api/projects", name="mage_api_projects", methods={"GET"})
-     */
-    public function apiIndex(): Response
+    private function getService(): ProjectService
     {
-        $this->denyAccessUnlessGranted('ROLE_PROJECT_LIST');
-
-        $projects = $this->projectService->getProjects();
-        return $this->json($projects, Response::HTTP_OK, [], ['list']);
+        return $this->projectService;
     }
 
-    /**
-     * @Route("/api/projects/{id}", name="mage_api_projects_detail", methods={"GET"})
-     */
-    public function apiDetail(Project $project): Response
+    private function getSerializer(): SerializerInterface
     {
-        $this->denyAccessUnlessGranted('ROLE_PROJECT_EDIT');
-
-        return $this->json($project, Response::HTTP_OK, [], ['detail']);
+        return $this->serializer;
     }
 
-    /**
-     * @Route("/projects", name="mage_projects")
-     */
-    public function index(): Response
+    private function getValidator(): ValidatorInterface
     {
-        $this->denyAccessUnlessGranted('ROLE_PROJECT_LIST');
-        return $this->render('projects/index.html.twig');
+        return $this->validator;
     }
 
-    /**
-     * @Route("/project/new", name="mage_project_new")
-     */
-    public function new(Request $request): Response
+    #[Route('/api/project', name: 'mage_api_project_collection', methods: ['GET'])]
+    public function collection(): Response
     {
-        $this->denyAccessUnlessGranted('ROLE_PROJECT_NEW');
+        $projects = $this->getService()->getCollection();
+        return $this->json($projects, Response::HTTP_OK, [], ['groups' => ['project-list']]);
+    }
 
+    #[Route('/api/project/{id}', name: 'mage_api_project_get', methods: ['GET'])]
+    public function get(string $id): Response
+    {
+        $project = $this->getService()->get($id);
+
+        if ($project instanceof Project) {
+            return $this->json($project, Response::HTTP_OK, [], ['groups' => ['project-detail']]);
+        }
+
+        throw new NotFoundHttpException(sprintf('Project "%s" not found.', $id));
+    }
+
+    #[Route('/api/project', name: 'mage_api_project_post', methods: ['POST'])]
+    public function post(Request $request): Response
+    {
         $project = new Project();
-        $form = $this->createForm(ProjectType::class, $project);
+        $this->getSerializer()->deserialize(
+            $request->getContent(),
+            Project::class,
+            'json',
+            [AbstractNormalizer::OBJECT_TO_POPULATE => $project]
+        );
 
-        $form->handleRequest($request);
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->projectService->create($project);
-
-            $this->addFlash('success', sprintf('Project %s created', $project->getName()));
-
-            return $this->redirectToRoute('mage_projects');
+        $errors = $this->getValidator()->validate($project);
+        if (count($errors) > 0) {
+            throw new InvalidPayloadException('Invalid payload.', $errors);
         }
 
-        return $this->render('projects/detail.html.twig', [
-            'form' => $form->createView()
-        ]);
-    }
-
-    /**
-     * @Route("/project/{id}", name="mage_project_detail")
-     */
-    public function detail(Project $project, Request $request): Response
-    {
-        $this->denyAccessUnlessGranted('ROLE_PROJECT_EDIT');
-
-        $form = $this->createForm(ProjectType::class, $project);
-
-        $form->handleRequest($request);
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->projectService->update($project);
-
-            $this->addFlash('success', sprintf('Project %s updated', $project->getName()));
-
-            return $this->redirectToRoute('mage_projects');
-        }
-
-        return $this->render('projects/detail.html.twig', [
-            'project' => $project,
-            'form' => $form->createView()
-        ]);
+        $this->getService()->create($project);
+        return $this->json($project, Response::HTTP_OK, [], ['groups' => ['project-detail']]);
     }
 }

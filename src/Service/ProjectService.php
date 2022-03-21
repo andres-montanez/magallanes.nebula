@@ -3,51 +3,61 @@
 namespace App\Service;
 
 use App\Entity\Project;
-use App\Entity\User;
 use App\Repository\ProjectRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Security\Core\Security;
 
-class ProjectService
+final class ProjectService
 {
-    protected EntityManagerInterface $entityManager;
-    protected Security $security;
     protected ProjectRepository $repository;
 
-    public function __construct(EntityManagerInterface $entityManager, Security $security)
+    public function __construct(private SSHService $sshService, private EntityManagerInterface $entityManager)
     {
-        $this->entityManager = $entityManager;
-        $this->security = $security;
-
         /** @var ProjectRepository $repository */
         $repository = $this->entityManager->getRepository(Project::class);
         $this->repository = $repository;
     }
 
+    private function getRepository(): ProjectRepository
+    {
+        return $this->repository;
+    }
+
+    private function getEntityManager(): EntityManagerInterface
+    {
+        return $this->entityManager;
+    }
+
+    private function getSSHService(): SSHService
+    {
+        return $this->sshService;
+    }
+
     public function create(Project $project)
     {
-        $this->entityManager->persist($project);
-        $this->entityManager->flush();
+        $key = $this->getSSHService()->generateProjectKey($project);
+        $project->setRepositorySSHPrivateKey($key->getPrivate());
+        $project->setRepositorySSHPublicKey($key->getPublic());
+
+
+        $this->getEntityManager()->persist($project);
+        $this->getEntityManager()->flush();
     }
 
     public function update(Project $project)
     {
-        $this->entityManager->flush();
+        $this->getEntityManager()->flush();
     }
 
     /**
      * @return Project[]
      */
-    public function getProjects(): array
+    public function getCollection(): array
     {
-        if ($this->security->isGranted(User::ROLE_ADMINISTRATOR)) {
-            return $this->repository->getProjectsForAdministrator();
-        } elseif ($this->security->isGranted(User::ROLE_USER)) {
-            /** @var User $user */
-            $user = $this->security->getUser();
-            return $this->repository->getRestrictedProjects($user->getGroupIds());
-        }
+        return $this->getRepository()->getProjectsForAdministrator();
+    }
 
-        return [];
+    public function get(string $id): ?Project
+    {
+        return $this->getRepository()->find($id);
     }
 }
