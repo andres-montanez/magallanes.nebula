@@ -2,20 +2,19 @@
 
 namespace App\Library\Build;
 
-use App\Entity\Environment;
 use App\Library\Environment\Config as EnvironmentConfig;
 use App\Entity\Build;
 use Symfony\Component\Yaml\Yaml;
 
-class Config
+final class Config
 {
-    protected array $environmentConfig = [];
-    protected array $envVars = [];
-    protected array $dockerOptions = [];
-    protected array $stages = [];
-    protected array $packageOptions = [];
-    protected array $deploymentOptions = [];
-    protected array $postTasks = [];
+    private array $environmentConfig = [];
+    private array $envVars = [];
+    private array $dockerOptions = [];
+    private array $stages = [];
+    private array $packageOptions = [];
+    private array $deploymentOptions = [];
+    private array $postTasks = [];
 
     public function __construct(Build $build)
     {
@@ -36,9 +35,9 @@ class Config
 
         // Define base Env Vars
         $this->envVars = [
-            'PROJECT' => $build->getEnvironment()->getProject()->getCode(),
+            'PROJECT_CODE' => $build->getEnvironment()->getProject()->getCode(),
             'PROJECT_NAME' => $build->getEnvironment()->getProject()->getName(),
-            'ENVIRONMENT' => $build->getEnvironment()->getCode(),
+            'ENVIRONMENT_CODE' => $build->getEnvironment()->getCode(),
             'ENVIRONMENT_NAME' => $build->getEnvironment()->getName(),
             'BUILD_ID' => $build->getId(),
             'BUILD_NUMBER' => $build->getNumber(),

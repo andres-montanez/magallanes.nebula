@@ -12,27 +12,27 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: 'App\Repository\ProjectRepository')]
 #[ORM\Table(name: 'project')]
-final class Project
+class Project
 {
     #[ORM\Id()]
     #[ORM\Column(name: 'project_id', type: 'string', length: 32, unique: true)]
     #[ORM\GeneratedValue(strategy: 'CUSTOM')]
     #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
-    #[Groups(['project-list', 'project-detail'])]
+    #[Groups(['project-list', 'project-detail', 'environment-detail', 'environment-summary', 'build-detail'])]
     private string $id;
 
     #[ORM\Column(name: 'project_code', type: 'string', length: 12, nullable: false, unique: true)]
     #[Assert\NotNull()]
     #[Assert\NotBlank()]
     #[Assert\Length(min: 3, max: 12)]
-    #[Groups(['project-list', 'project-detail'])]
+    #[Groups(['project-list', 'project-detail', 'environment-detail', 'environment-summary', 'build-detail'])]
     private string $code;
 
     #[ORM\Column(name: 'project_name', type: 'string', length: 32, nullable: false)]
     #[Assert\NotNull()]
     #[Assert\NotBlank()]
     #[Assert\Length(min: 3, max: 32)]
-    #[Groups(['project-list', 'project-detail'])]
+    #[Groups(['project-list', 'project-detail', 'environment-detail', 'environment-summary', 'build-detail'])]
     private string $name;
 
     #[ORM\Column(name: 'project_description', type: 'string', length: 128, nullable: true)]

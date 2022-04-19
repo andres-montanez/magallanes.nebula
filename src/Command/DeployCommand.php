@@ -29,15 +29,18 @@ class DeployCommand extends Command
 
                 $this->deploymentService->checkout($build);
                 $this->deploymentService->build($build);
+
+                if ($build->getStatus() === Build::STATUS_FAILED) {
+                    return Command::FAILURE;
+                }
+
                 $this->deploymentService->package($build);
                 $this->deploymentService->release($build);
-
             } elseif ($build->getStatus() === Build::STATUS_ROLLBACK) {
                 $output->writeln(sprintf('Rollbacking build %s', $build->getId()));
 
                 $this->deploymentService->startRollback($build);
                 $this->deploymentService->release($build);
-
             } elseif ($build->getStatus() === Build::STATUS_DELETE) {
                 $output->writeln(sprintf('Deleting build %s', $build->getId()));
 
@@ -46,6 +49,5 @@ class DeployCommand extends Command
         }
 
         return Command::SUCCESS;
-
     }
 }

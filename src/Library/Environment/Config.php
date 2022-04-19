@@ -7,9 +7,9 @@ use App\Library\Configuration\EnvironmentConfiguration;
 use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\Yaml\Yaml;
 
-class Config
+final class Config
 {
-    protected array $config = [];
+    private array $config = [];
 
     public function __construct(Environment $environment)
     {

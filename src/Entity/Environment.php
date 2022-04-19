@@ -17,27 +17,27 @@ class Environment
     #[ORM\Column(name: 'environment_id', type: 'string', length: 32, unique: true)]
     #[ORM\GeneratedValue(strategy: 'CUSTOM')]
     #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
-    #[Groups(['environment-list', 'environment-detail'])]
+    #[Groups(['environment-list', 'environment-detail', 'build-detail'])]
     private string $id;
 
     #[ORM\ManyToOne(targetEntity: 'App\Entity\Project', inversedBy: 'environments')]
     #[ORM\JoinColumn(name: 'environment_project', referencedColumnName: 'project_id', nullable: false)]
     #[Assert\NotNull()]
-    #[Ignore]
+    #[Groups(['environment-detail', 'environment-summary', 'build-detail'])]
     private Project $project;
 
     #[ORM\Column(name: 'environment_code', type: 'string', length: 12, nullable: false)]
     #[Assert\NotNull()]
     #[Assert\NotBlank()]
     #[Assert\Length(min: 3, max: 12)]
-    #[Groups(['environment-list', 'environment-detail'])]
+    #[Groups(['environment-list', 'environment-detail', 'build-detail'])]
     private string $code;
 
     #[ORM\Column(name: 'environment_name', type: 'string', length: 32, nullable: false)]
     #[Assert\NotNull()]
     #[Assert\NotBlank()]
     #[Assert\Length(min: 3, max: 32)]
-    #[Groups(['environment-list', 'environment-detail'])]
+    #[Groups(['environment-list', 'environment-detail', 'build-detail'])]
     private string $name;
 
     #[ORM\Column(name: 'environment_branch', type: 'string', length: 128, nullable: false)]

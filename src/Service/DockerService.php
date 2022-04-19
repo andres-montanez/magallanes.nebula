@@ -5,6 +5,7 @@ namespace App\Service;
 use App\Entity\BuildStageStep;
 use App\Library\Tool\EnvVars;
 use Symfony\Component\HttpClient\CurlHttpClient;
+
 class DockerService
 {
     protected string $socket = '/var/run/docker.sock';
@@ -26,7 +27,7 @@ class DockerService
         $pullLog = $response->getContent(false);
 
         // Prepare options
-        $name = sprintf('mage_%d', time());
+        $name = sprintf('mage-%d', $step->getId());
         $env = [
             'TERM=vt220'
         ];
@@ -43,7 +44,7 @@ class DockerService
             'HostConfig' => [
                 'Mounts' => [
                     [
-                        'Target' => '/home/app/current',
+                        'Target' => '/home/app',
                         'Source' => $directory,
                         'Type' => 'bind',
                         'ReadOnly' => false,
@@ -51,7 +52,7 @@ class DockerService
                 ],
                 'Memory' => $this->getMemory($options)
             ],
-            'WorkingDir' => '/home/app/current',
+            'WorkingDir' => '/home/app',
             'Cmd' => $command,
             'Image' => $image,
             'AttachStdout' => false,

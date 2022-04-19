@@ -3,18 +3,15 @@
 namespace App\Entity;
 
 use App\Library\Build\Config;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Validator\Constraints as Assert;
-use Symfony\Component\Uid\Uuid;
 use Doctrine\ORM\Mapping as ORM;
 
-/**
- * @ORM\Entity()
- * @ORM\Table(name="build",
- *    uniqueConstraints={@ORM\UniqueConstraint(columns={"build_environment", "build_number"})}
- * )
- */
+#[ORM\Entity()]
+#[ORM\Table(name: 'build')]
+#[ORM\UniqueConstraint(name: 'unq_build_number', columns: ['build_environment', 'build_number'])]
 class Build
 {
     public const STATUS_PENDING = 'pending';
@@ -32,95 +29,75 @@ class Build
     public const STATUS_ROLLBACKING = 'rollbacking';
     public const STATUS_DELETE = 'delete';
 
-    /**
-     * @ORM\Id()
-     * @ORM\Column(name="build_id", type="string", length="32", unique=true)
-     * @ORM\GeneratedValue(strategy="CUSTOM")
-     * @ORM\CustomIdGenerator(class="doctrine.uuid_generator")
-     */
-    protected ?string $id = null;
+    #[ORM\Id()]
+    #[ORM\Column(name: 'build_id', type: 'string', length: 32, unique: true)]
+    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
+    #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
+    #[Groups(['build-list', 'build-detail', 'build-request', 'environment-list'])]
+    private ?string $id = null;
 
-    /**
-     * @ORM\ManyToOne(targetEntity="App\Entity\Environment")
-     * @ORM\JoinColumn(name="build_environment", referencedColumnName="environment_id", nullable=false)
-     *
-     * @Assert\NotNull()
-     */
-    protected Environment $environment;
+    #[ORM\ManyToOne(targetEntity: 'App\Entity\Environment')]
+    #[ORM\JoinColumn(name: 'build_environment', referencedColumnName: 'environment_id', nullable: false)]
+    #[Assert\NotNull()]
+    #[Groups(['build-detail'])]
+    private Environment $environment;
 
-    /**
-     * @ORM\Column(name="build_number", type="integer", nullable=false)
-     *
-     * @Assert\NotNull()
-     */
-    protected int $number;
+    #[ORM\Column(name: 'build_number', type: 'integer', nullable: false)]
+    #[Assert\NotNull()]
+    #[Groups(['build-list', 'build-detail', 'build-request', 'environment-list'])]
+    private int $number;
 
-    /**
-     * @ORM\Column(name="build_rollback_number", type="integer", nullable=true)
-     */
-    protected ?int $rollbackNumber = null;
+    #[ORM\Column(name: 'build_rollback_number', type: 'integer', nullable: true)]
+    #[Groups(['build-detail'])]
+    private ?int $rollbackNumber = null;
 
-    /**
-     * @ORM\Column(name="build_created_at", type="datetime_immutable", nullable=false)
-     *
-     * @Assert\NotNull()
-     * @Assert\Date()
-     */
-    protected \DateTimeImmutable $createdAt;
+    #[ORM\Column(name: 'build_created_at', type: 'datetime_immutable', nullable: false)]
+    #[Assert\NotNull()]
+    #[Assert\Date()]
+    #[Groups(['build-list', 'build-detail', 'build-request', 'environment-list'])]
+    private \DateTimeImmutable $createdAt;
 
-    /**
-     * @ORM\Column(name="build_started_at", type="datetime_immutable", nullable=true)
-     *
-     * @Assert\Date()
-     */
-    protected ?\DateTimeImmutable $startedAt = null;
+    #[ORM\Column(name: 'build_started_at', type: 'datetime_immutable', nullable: true)]
+    #[Assert\Date()]
+    #[Groups(['build-list', 'build-detail'])]
+    private ?\DateTimeImmutable $startedAt = null;
 
-    /**
-     * @ORM\Column(name="build_finished_at", type="datetime_immutable", nullable=true)
-     *
-     * @Assert\Date()
-     */
-    protected ?\DateTimeImmutable $finishedAt = null;
+    #[ORM\Column(name: 'build_finished_at', type: 'datetime_immutable', nullable: true)]
+    #[Assert\Date()]
+    #[Groups(['build-list', 'build-detail'])]
+    private ?\DateTimeImmutable $finishedAt = null;
 
-    /**
-     * @ORM\OneToMany(targetEntity="App\Entity\BuildStage", mappedBy="build", cascade={"persist", "remove"})
-     */
-    protected Collection $stages;
+    #[ORM\OneToMany(targetEntity: 'App\Entity\BuildStage', mappedBy: 'build', cascade: ['persist', 'remove'])]
+    #[Groups(['build-detail'])]
+    private Collection $stages;
 
-    /**
-     * @ORM\Column(name="build_branch", type="string", length=128, nullable=false)
-     */
-    protected string $branch;
+    #[ORM\Column(name: 'build_branch', type: 'string', length: 128, nullable: false)]
+    #[Groups(['build-detail', 'build-request'])]
+    private string $branch;
 
-    /**
-     * @ORM\Column(name="build_commit_hash", type="string", length=40, nullable=true)
-     */
-    protected ?string $commitHash = null;
+    #[ORM\Column(name: 'build_commit_hash', type: 'string', length: 40, nullable: true)]
+    #[Groups(['build-list', 'build-detail'])]
+    private ?string $commitHash = null;
 
-    /**
-     * @ORM\Column(name="build_commit_message", type="text",nullable=true)
-     */
-    protected ?string $commitMessage = null;
+    #[ORM\Column(name: 'build_commit_message', type: 'text', nullable: true)]
+    #[Groups(['build-list', 'build-detail'])]
+    private ?string $commitMessage = null;
 
-    /**
-     * @ORM\Column(name="build_checkout_std_out", type="text", nullable=true)
-     */
-    protected ?string $checkoutStdOut = null;
+    #[ORM\Column(name: 'build_checkout_std_out', type: 'text', nullable: true)]
+    #[Groups(['build-detail'])]
+    private ?string $checkoutStdOut = null;
 
-    /**
-     * @ORM\Column(name="build_checkout_std_err", type="text", nullable=true)
-     */
-    protected ?string $checkoutStdErr = null;
+    #[ORM\Column(name: 'build_checkout_std_err', type: 'text', nullable: true)]
+    #[Groups(['build-detail'])]
+    private ?string $checkoutStdErr = null;
 
-    /**
-     * @ORM\Column(name="build_requested_by", type="string", length=128, nullable=true)
-     */
-    protected ?string $requestedBy = null;
+    #[ORM\Column(name: 'build_requested_by', type: 'string', length: 128, nullable: true)]
+    #[Groups(['build-detail'])]
+    private ?string $requestedBy = null;
 
-    /**
-     * @ORM\Column(name="build_status", type="string", length=12, nullable=false)
-     */
-    protected string $status = self::STATUS_PENDING;
+    #[ORM\Column(name: 'build_status', type: 'string', length: 12, nullable: false)]
+    #[Groups(['build-list', 'build-detail', 'build-request', 'environment-list'])]
+    private string $status = self::STATUS_PENDING;
 
     private ?Config $config = null;
 
@@ -157,6 +134,7 @@ class Build
         return null;
     }
 
+    #[Groups(['build-list', 'build-detail', 'environment-list'])]
     public function getElapsedTime(): ?string
     {
         if ($this->getStartedAt() instanceof \DateTimeInterface) {
@@ -278,6 +256,7 @@ class Build
         return $this;
     }
 
+    #[Groups(['build-list', 'build-detail'])]
     public function getCommitShortHash(): string
     {
         return substr($this->getCommitHash(), 0, 7);

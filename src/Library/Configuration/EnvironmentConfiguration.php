@@ -60,6 +60,7 @@ class EnvironmentConfiguration implements ConfigurationInterface
                             ->min(1)
                             ->defaultValue(3)
                         ->end()
+                        // deploy
                         ->arrayNode('deploy')
                             ->children()
                                 ->enumNode('strategy')
@@ -71,26 +72,24 @@ class EnvironmentConfiguration implements ConfigurationInterface
                                     ->scalarPrototype()->end()
                                 ->end()
                             ->end()
-                        ->end()
-                    ->end()
-                ->end()
-
-                // post
-                ->arrayNode('post')
-                    ->children()
-                        ->arrayNode('success')
+                        ->end() // deploy
+                        // post
+                        ->arrayNode('post')
                             ->arrayPrototype()
                                 ->children()
-                                    ->scalarNode('type')->defaultNull()->end()
-                                    ->scalarNode('user')->defaultNull()->end()
-                                    ->scalarNode('host')->defaultNull()->end()
-                                    ->scalarNode('cmd')->end()
+                                    ->scalarNode('name')->defaultNull()->end()
+                                    ->arrayNode('steps')
+                                        ->arrayPrototype()
+                                            ->children()
+                                                ->scalarNode('cmd')->end()
+                                            ->end()
+                                        ->end()
+                                    ->end() // steps
                                 ->end()
                             ->end()
-                        ->end()
+                        ->end() // post
                     ->end()
                 ->end()
-
             // --
             ->end()
         ;

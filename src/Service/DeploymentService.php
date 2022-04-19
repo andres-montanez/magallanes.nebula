@@ -4,12 +4,13 @@ namespace App\Service;
 
 use App\Entity\Environment;
 use App\Entity\Build;
+use App\Entity\BuildStage;
 use App\Library\Environment\Config;
 use App\Library\Tool\EnvVars;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Yaml\Yaml;
 
-class DeploymentService
+final class DeploymentService
 {
     public const LOCAL_HOME = '/home/magallanes';
     protected const POST_TASK_SUCCESS = 'success';
@@ -34,8 +35,7 @@ class DeploymentService
         PackageService $packageService,
         ReleaseService $releaseService,
         SSHService $SSHService
-    )
-    {
+    ) {
         $this->homeOnHost = $magallanesHome;
         $this->entityManager = $entityManager;
         $this->gitService = $gitService;
@@ -43,6 +43,33 @@ class DeploymentService
         $this->packageService = $packageService;
         $this->releaseService = $releaseService;
         $this->SSHService = $SSHService;
+    }
+
+    private function getEntityManager(): EntityManagerInterface
+    {
+        return $this->entityManager;
+    }
+
+    private function getBuildService(): BuildService
+    {
+        return $this->buildService;
+    }
+
+    public function request(Environment $environment, ?string $branch = null, ?string $requestedBy = null): Build
+    {
+        if ($branch === null) {
+            $branch = $environment->getBranch();
+        }
+
+        // Create Build
+        $build = $this->getBuildService()->create($environment, $branch);
+        $build->setRequestedBy($requestedBy);
+
+        // Persist Build
+        $this->getEntityManager()->persist($build);
+        $this->getEntityManager()->flush();
+
+        return $build;
     }
 
     public function getBuildToProcess(): ?Build
@@ -59,28 +86,11 @@ class DeploymentService
         return $build;
     }
 
-    public function request(Environment $environment, ?string $branch = null, ?string $requestedBy = null): Build
-    {
-        if ($branch === null) {
-            $branch = $environment->getBranch();
-        }
-
-        // Create Build
-        $build = $this->buildService->create($environment, $branch);
-        $build->setRequestedBy($requestedBy);
-
-        $this->entityManager->persist($build);
-        $this->entityManager->flush();
-
-        return $build;
-    }
-
     public function checkout(Build $build): void
     {
         $build
             ->setStartedAt(new \DateTimeImmutable('now'))
-            ->setStatus(Build::STATUS_CHECKING_OUT)
-        ;
+            ->setStatus(Build::STATUS_CHECKING_OUT);
         $this->entityManager->flush();
 
         try {
@@ -89,8 +99,7 @@ class DeploymentService
         } catch (\Throwable $exception) {
             $build
                 ->setStatus(Build::STATUS_FAILED)
-                ->setFinishedAt(new \DateTimeImmutable('now'))
-            ;
+                ->setFinishedAt(new \DateTimeImmutable('now'));
             $this->notify($build, self::NOTIFY_FAILURE);
         }
 
@@ -108,9 +117,14 @@ class DeploymentService
             $this->getRepositoryPathOnHost($build)
         );
 
+        if ($build->getStatus() === Build::STATUS_FAILED) {
+            $build->setFinishedAt(new \DateTimeImmutable());
+            $this->entityManager->flush();
+            return;
+        }
+
         $build->setStatus(Build::STATUS_BUILT);
         $this->entityManager->flush();
-
     }
 
     public function package(Build $build): void
@@ -143,13 +157,17 @@ class DeploymentService
 
         $build
             ->setStatus(Build::STATUS_SUCCESSFUL)
-            ->setFinishedAt(new \DateTimeImmutable('now'))
-        ;
+            ->setFinishedAt(new \DateTimeImmutable('now'));
         $this->entityManager->flush();
         $this->notify($build, self::NOTIFY_SUCCESS);
 
         $this->cleanup($build->getEnvironment());
     }
+
+
+
+
+
 
     public function cleanup(Environment $environment): void
     {
@@ -196,8 +214,7 @@ class DeploymentService
     {
         $build
             ->setStartedAt(new \DateTimeImmutable('now'))
-            ->setStatus(Build::STATUS_ROLLBACKING)
-        ;
+            ->setStatus(Build::STATUS_ROLLBACKING);
         $this->entityManager->flush();
 
         $this->packageService->copyBuild($build, $this->getArtifactsPath($build));
@@ -205,22 +222,12 @@ class DeploymentService
 
     protected function getRepositoryPath(Build $build): string
     {
-        return sprintf(
-            '%s/repositories/%s/%s',
-            self::LOCAL_HOME,
-            $build->getEnvironment()->getProject()->getCode(),
-            $build->getEnvironment()->getCode()
-        );
+        return sprintf('%s/repositories/%s', self::LOCAL_HOME, $build->getId());
     }
 
     protected function getRepositoryPathOnHost(Build $build): string
     {
-        return sprintf(
-            '%s/repositories/%s/%s',
-            $this->homeOnHost,
-            $build->getEnvironment()->getProject()->getCode(),
-            $build->getEnvironment()->getCode()
-        );
+        return sprintf('%s/repositories/%s', $this->homeOnHost, $build->getId());
     }
 
     protected function getArtifactsPath(Build $build): string
@@ -235,7 +242,6 @@ class DeploymentService
 
     protected function notify(Build $build, string $type): void
     {
-
     }
 
     protected function executePostTasks(Build $build, string $type): void

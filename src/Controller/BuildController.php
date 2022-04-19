@@ -3,45 +3,47 @@
 namespace App\Controller;
 
 use App\Entity\Build;
+use App\Service\BuildService;
 use App\Service\DeploymentService;
+use App\Service\EnvironmentService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 class BuildController extends AbstractController
 {
     protected DeploymentService $deploymentService;
 
-    public function __construct(DeploymentService $deploymentService)
-    {
+    public function __construct(
+        private BuildService $buildService,
+        private EnvironmentService $environmentService,
+        DeploymentService $deploymentService
+    ) {
         $this->deploymentService = $deploymentService;
     }
 
-    /**
-     * @Route("/api/build/{id}", name="mage_api_build_detail")
-     */
-    public function apiDetail(Build $build): Response
+    private function getService(): BuildService
     {
-        $this->denyAccessUnlessGranted('view', $build);
-
-        return $this->json($build, Response::HTTP_OK, [], ['detail']);
+        return $this->buildService;
     }
 
-    /**
-     * @Route("/build/{id}", name="mage_build_detail")
-     */
-    public function detail(Build $build): Response
+    #[Route('/api/build/{id}', name: 'mage_api_build_get', methods: ['GET'])]
+    public function get(string $id): Response
     {
-        $this->denyAccessUnlessGranted('view', $build);
+        $build = $this->getService()->get($id);
+        if (!$build instanceof Build) {
+            throw new NotFoundHttpException(sprintf('Build "%s" not found.', $id));
+        }
 
-        return $this->render('builds/detail.html.twig', [
-            'project' => $build->getEnvironment()->getProject(),
-            'environment' => $build->getEnvironment(),
-            'build' => $build
-        ]);
+        return $this->json($build, Response::HTTP_OK, [], ['groups' => ['build-detail']]);
     }
+
+
+
+
 
     /**
      * @Route("/build/{id}/logs/{type}", name="mage_build_logs")

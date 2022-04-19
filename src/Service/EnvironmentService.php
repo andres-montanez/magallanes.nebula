@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Entity\Build;
 use App\Entity\Project;
 use App\Entity\Environment;
 use Doctrine\ORM\EntityManagerInterface;
@@ -48,11 +49,40 @@ final class EnvironmentService
         );
     }
 
-    public function get(Project $project, string $id): ?Environment
+    public function get(string $id): ?Environment
     {
         return $this->entityManager->getRepository(Environment::class)->findOneBy([
-            'project' => $project,
             'id' => $id,
         ]);
+    }
+
+    public function getLastBuild(Environment $environment): ?Build
+    {
+        return $this->entityManager->getRepository(Build::class)->findOneBy(
+            ['environment' => $environment],
+            ['createdAt' => 'DESC']
+        );
+    }
+
+    public function getLastSuccessBuild(Environment $environment): ?Build
+    {
+        return $this->entityManager->getRepository(Build::class)->findOneBy(
+            [
+                'environment' => $environment,
+                'status' => Build::STATUS_SUCCESSFUL,
+            ],
+            ['createdAt' => 'DESC']
+        );
+    }
+
+    public function getLastFailBuild(Environment $environment): ?Build
+    {
+        return $this->entityManager->getRepository(Build::class)->findOneBy(
+            [
+                'environment' => $environment,
+                'status' => Build::STATUS_FAILED,
+            ],
+            ['createdAt' => 'DESC']
+        );
     }
 }

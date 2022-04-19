@@ -17,9 +17,13 @@ services:
         volumes:
             - ${APP_DIR}:/home/app:delegated
             - ${MAGALLANES_HOME}:/home/magallanes:delegated
+            - ${MAGALLANES_DOCKER_SOCKET}:/var/run/docker.sock
         links:
             - dbserver
+        environment:
+            MAGALLANES_HOME: ${MAGALLANES_HOME}
     worker:
+        privileged: true
         container_name: nebula-worker
         image: nebula-worker
         build: ./worker
@@ -30,7 +34,8 @@ services:
         links:
             - dbserver
         environment:
-            - MAGALLANES_WORKERS_DEPLOYER=${MAGALLANES_WORKERS_DEPLOYER}
+            MAGALLANES_HOME: ${MAGALLANES_HOME}
+            MAGALLANES_WORKERS_DEPLOYER: ${MAGALLANES_WORKERS_DEPLOYER}
     dbserver:
         container_name: nebula-dbserver
         image: nebula-dbserver
