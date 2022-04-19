@@ -19,7 +19,6 @@ class GitService
         // Git SSH options
         $gitSSHOptions = ['GIT_SSH_COMMAND' => sprintf('ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no', $sshKey)];
 
-
         if (file_exists($repositoryPath)) {
             $filesystem = new Filesystem();
             $filesystem->remove($repositoryPath);

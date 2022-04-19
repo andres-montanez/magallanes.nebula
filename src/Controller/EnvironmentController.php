@@ -83,8 +83,9 @@ class EnvironmentController extends AbstractController
     }
 
     #[Route('/api/environment', name: 'mage_api_environment_post', methods: ['POST'])]
-    public function post(Request $request, string $projectId): Response
+    public function post(Request $request): Response
     {
+        $projectId = strval($request->query->get('projectId'));
         $project = $this->getProjectService()->get($projectId);
         if (!$project instanceof Project) {
             throw new NotFoundHttpException(sprintf('Project "%s" not found.', $projectId));
