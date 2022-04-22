@@ -8,6 +8,10 @@ use App\Entity\BuildStage;
 use App\Library\Environment\Config;
 use App\Library\Tool\EnvVars;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Notifier\Bridge\Slack\SlackOptions;
+use Symfony\Component\Notifier\ChatterInterface;
+use Symfony\Component\Notifier\Message\ChatMessage;
+use Symfony\Component\Notifier\NotifierInterface;
 use Symfony\Component\Yaml\Yaml;
 
 final class DeploymentService
@@ -26,6 +30,7 @@ final class DeploymentService
     protected PackageService $packageService;
     protected ReleaseService $releaseService;
     protected SSHService $SSHService;
+    protected ChatterInterface $chatterService;
 
     public function __construct(
         $magallanesHome,
@@ -34,7 +39,8 @@ final class DeploymentService
         BuildService $buildService,
         PackageService $packageService,
         ReleaseService $releaseService,
-        SSHService $SSHService
+        SSHService $SSHService,
+        ChatterInterface $chatterService
     ) {
         $this->homeOnHost = $magallanesHome;
         $this->entityManager = $entityManager;
@@ -43,6 +49,7 @@ final class DeploymentService
         $this->packageService = $packageService;
         $this->releaseService = $releaseService;
         $this->SSHService = $SSHService;
+        $this->chatterService = $chatterService;
     }
 
     private function getEntityManager(): EntityManagerInterface
@@ -120,6 +127,7 @@ final class DeploymentService
         if ($build->getStatus() === Build::STATUS_FAILED) {
             $build->setFinishedAt(new \DateTimeImmutable());
             $this->entityManager->flush();
+            $this->notify($build, self::NOTIFY_FAILURE);
             return;
         }
 
@@ -242,6 +250,13 @@ final class DeploymentService
 
     protected function notify(Build $build, string $type): void
     {
+        $config = $build->getConfig()->getGlobalPost();
+        $messageText = EnvVars::replace($config[$type]['slack']['message'], $build->getConfig()->getEnvVars());
+        $message = new ChatMessage($messageText);
+
+        //$message->options((new SlackOptions())->channel('myChannel');
+
+        $this->chatterService->send($message);
     }
 
     protected function executePostTasks(Build $build, string $type): void

@@ -15,6 +15,7 @@ final class Config
     private array $packageOptions = [];
     private array $deploymentOptions = [];
     private array $postTasks = [];
+    private array $globalPost = [];
 
     public function __construct(Build $build)
     {
@@ -27,6 +28,7 @@ final class Config
         $this->processPackageOptions($build);
         $this->processDeploymentOptions();
         $this->processPostTasks();
+        $this->processGlobalPost($build);
     }
 
     private function processEnvVars(Build $build): void
@@ -125,6 +127,18 @@ final class Config
         $this->postTasks = $tasks;
     }
 
+    private function processGlobalPost(Build $build): void
+    {
+        $post = [];
+        $projectConfig = Yaml::parse($build->getEnvironment()->getProject()->getConfig());
+
+        if (isset($projectConfig['post']) && is_array($projectConfig['post'])) {
+            $post = $projectConfig['post'];
+        }
+
+        $this->globalPost = $post;
+    }
+
     public function getEnvVars(): array
     {
         return $this->envVars;
@@ -153,5 +167,10 @@ final class Config
     public function getPostTasks(): array
     {
         return $this->postTasks;
+    }
+
+    public function getGlobalPost(): array
+    {
+        return $this->globalPost;
     }
 }
