@@ -145,9 +145,6 @@ final class DeploymentService
 
         $build->setStatus(Build::STATUS_PACKAGED);
         $this->entityManager->flush();
-
-        // Cleanup Repository
-        $this->gitService->cleanup($this->getRepositoryPath($build));
     }
 
     public function release(Build $build): void
@@ -169,16 +166,16 @@ final class DeploymentService
         $this->entityManager->flush();
         $this->notify($build, self::NOTIFY_SUCCESS);
 
-        $this->cleanup($build->getEnvironment());
+        $this->cleanup($build);
     }
 
-
-
-
-
-
-    public function cleanup(Environment $environment): void
+    public function cleanup(Build $build): void
     {
+        // Cleanup Repository
+        $this->gitService->cleanup($this->getRepositoryPath($build));
+
+        // Gather info
+        $environment = $build->getEnvironment();
         $environmentConfig = new Config($environment);
         $releasesToKeep = $environmentConfig->getReleasesToKeep();
         $buildsToKeep = $environmentConfig->getBuildsToKeep();
@@ -199,6 +196,9 @@ final class DeploymentService
             }
         }
     }
+
+
+
 
     public function requestDelete(Build $build): void
     {
