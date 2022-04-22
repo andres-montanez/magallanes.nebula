@@ -130,9 +130,6 @@ final class DeploymentService
 
         $build->setStatus(Build::STATUS_BUILT);
         $this->entityManager->flush();
-
-        // Cleanup Repo
-        $this->gitService->cleanup($this->getRepositoryPath($build));
     }
 
     public function package(Build $build): void
@@ -148,6 +145,9 @@ final class DeploymentService
 
         $build->setStatus(Build::STATUS_PACKAGED);
         $this->entityManager->flush();
+
+        // Cleanup Repository
+        $this->gitService->cleanup($this->getRepositoryPath($build));
     }
 
     public function release(Build $build): void
