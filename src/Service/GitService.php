@@ -63,6 +63,14 @@ class GitService
             ->setCommitMessage(trim($process->getOutput()));
     }
 
+    public function cleanup(string $repositoryPath): void
+    {
+        if (file_exists($repositoryPath)) {
+            $filesystem = new Filesystem();
+            $filesystem->remove($repositoryPath);
+        }
+    }
+
     protected function cloneRepository(Build $build, $repositoryPath, $gitSSHOptions): Process
     {
         $process = new Process([

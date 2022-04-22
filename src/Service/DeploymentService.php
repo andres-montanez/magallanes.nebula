@@ -4,15 +4,12 @@ namespace App\Service;
 
 use App\Entity\Environment;
 use App\Entity\Build;
-use App\Entity\BuildStage;
 use App\Library\Environment\Config;
 use App\Library\Tool\EnvVars;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Notifier\Bridge\Slack\SlackOptions;
 use Symfony\Component\Notifier\ChatterInterface;
 use Symfony\Component\Notifier\Message\ChatMessage;
-use Symfony\Component\Notifier\NotifierInterface;
-use Symfony\Component\Yaml\Yaml;
 
 final class DeploymentService
 {
@@ -133,6 +130,9 @@ final class DeploymentService
 
         $build->setStatus(Build::STATUS_BUILT);
         $this->entityManager->flush();
+
+        // Cleanup Repo
+        $this->gitService->cleanup($this->getRepositoryPath($build));
     }
 
     public function package(Build $build): void
