@@ -21,10 +21,10 @@ class Project
     #[Groups(['project-list', 'project-detail', 'environment-detail', 'environment-summary', 'build-detail'])]
     private string $id;
 
-    #[ORM\Column(name: 'project_code', type: 'string', length: 12, nullable: false, unique: true)]
+    #[ORM\Column(name: 'project_code', type: 'string', length: 32, nullable: false, unique: true)]
     #[Assert\NotNull()]
     #[Assert\NotBlank()]
-    #[Assert\Length(min: 3, max: 12)]
+    #[Assert\Length(min: 3, max: 32)]
     #[Groups(['project-list', 'project-detail', 'environment-detail', 'environment-summary', 'build-detail'])]
     private string $code;
 
