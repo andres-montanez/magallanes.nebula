@@ -44,6 +44,10 @@ class WebhookController extends AbstractController
     #[Route('/webhook/{id}', name: 'mage_webhook', methods: ['POST'])]
     public function deploy(Request $request, string $id): Response
     {
+        if ($request->headers->get('X-GitHub-Event') === 'ping') {
+            return new Response('Pong', Response::HTTP_OK);
+        }
+
         $environment = $this->getService()->get($id);
         if (!$environment instanceof Environment) {
             throw new NotFoundHttpException(sprintf('Environment "%s" not found for requested project.', $id));
@@ -55,8 +59,13 @@ class WebhookController extends AbstractController
         }
 
         if (isset($payload['ref'])) {
-            $build = $this->getDeploymentService()->request($environment);
-            return $this->json($build, Response::HTTP_OK, [], ['groups' => ['build-request']]);
+            $ref = sprintf('refs/heads/%s', $environment->getBranch());
+            if (strtolower($ref) === strtolower(strval($payload['ref']))) {
+                $build = $this->getDeploymentService()->request($environment);
+                return $this->json($build, Response::HTTP_OK, [], ['groups' => ['build-request']]);
+            }
+
+            return new Response('Skipped', Response::HTTP_OK);
         }
 
         throw new BadRequestException('Invalid payload.');
