@@ -15,11 +15,11 @@ use Doctrine\ORM\Mapping as ORM;
 class Project
 {
     #[ORM\Id()]
-    #[ORM\Column(name: 'project_id', type: 'string', length: 32, unique: true)]
+    #[ORM\Column(name: 'project_id', type: 'string', length: 36, unique: true)]
     #[ORM\GeneratedValue(strategy: 'CUSTOM')]
     #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
     #[Groups(['project-list', 'project-detail', 'environment-detail', 'environment-summary', 'build-detail'])]
-    private string $id;
+    private ?string $id = null;
 
     #[ORM\Column(name: 'project_code', type: 'string', length: 32, nullable: false, unique: true)]
     #[Assert\NotNull()]
@@ -63,6 +63,7 @@ class Project
     #[Groups(['project-detail'])]
     private ?string $config = null;
 
+    /** @var Collection<string, Environment> */
     #[ORM\OneToMany(targetEntity: 'App\Entity\Environment', mappedBy: 'project')]
     #[Ignore]
     private Collection $environments;
@@ -72,7 +73,7 @@ class Project
         $this->environments = new ArrayCollection();
     }
 
-    public function getId(): string
+    public function getId(): ?string
     {
         return $this->id;
     }
@@ -154,9 +155,7 @@ class Project
         return $this;
     }
 
-    /**
-     * @return Environment[]
-     */
+    /** @return Collection<string, Environment> */
     public function getEnvironments(): Collection
     {
         return $this->environments;
@@ -170,7 +169,7 @@ class Project
 
     public function removeEnvironment(Environment $environment): self
     {
-        $this->environments->remove($environment);
+        $this->environments->remove($environment->getId());
         return $this;
     }
 }

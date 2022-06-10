@@ -13,12 +13,21 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\UniqueConstraint(name: 'unq_environment_code', columns: ['environment_project', 'environment_code'])]
 class Environment
 {
+    public const WEBHOOK_DISABLED = 'disabled';
+    public const WEBHOOK_PUSH = 'push';
+    public const WEBHOOK_RELEASE = 'release';
+    private const WEBHOOK_OPTIONS = [
+        self::WEBHOOK_DISABLED,
+        self::WEBHOOK_PUSH,
+        self::WEBHOOK_RELEASE,
+    ];
+
     #[ORM\Id()]
-    #[ORM\Column(name: 'environment_id', type: 'string', length: 32, unique: true)]
+    #[ORM\Column(name: 'environment_id', type: 'string', length: 36, unique: true)]
     #[ORM\GeneratedValue(strategy: 'CUSTOM')]
     #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
     #[Groups(['environment-list', 'environment-detail', 'build-detail'])]
-    private string $id;
+    private ?string $id = null;
 
     #[ORM\ManyToOne(targetEntity: 'App\Entity\Project', inversedBy: 'environments')]
     #[ORM\JoinColumn(name: 'environment_project', referencedColumnName: 'project_id', nullable: false)]
@@ -47,10 +56,16 @@ class Environment
     #[Groups(['environment-detail'])]
     private string $branch;
 
+    #[ORM\Column(name: 'environment_webhook', type: 'string', length: 12, nullable: false)]
+    #[Assert\NotNull()]
+    #[Assert\Choice(choices: self::WEBHOOK_OPTIONS)]
+    #[Groups(['environment-detail'])]
+    private string $webhook = self::WEBHOOK_DISABLED;
+
     #[ORM\Column(name: 'environment_config', type: 'text', nullable: false)]
     #[Assert\NotNull()]
     #[Assert\NotBlank()]
-    //#[AppAssert\EnvironmentConfig()]
+    #[AppAssert\EnvironmentConfig()]
     #[Groups(['environment-detail'])]
     private string $config;
 
@@ -64,7 +79,7 @@ class Environment
     #[Groups(['environment-detail'])]
     private ?string $sshPublicKey = null;
 
-    public function getId(): string
+    public function getId(): ?string
     {
         return $this->id;
     }
@@ -110,6 +125,17 @@ class Environment
     public function setBranch(string $branch): self
     {
         $this->branch = $branch;
+        return $this;
+    }
+
+    public function getWebhook(): string
+    {
+        return $this->webhook;
+    }
+
+    public function setWebhook(string $webhook): self
+    {
+        $this->webhook = $webhook;
         return $this;
     }
 

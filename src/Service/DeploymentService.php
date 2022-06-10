@@ -7,7 +7,6 @@ use App\Entity\Build;
 use App\Library\Environment\Config;
 use App\Library\Tool\EnvVars;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Notifier\Bridge\Slack\SlackOptions;
 use Symfony\Component\Notifier\ChatterInterface;
 use Symfony\Component\Notifier\Message\ChatMessage;
 
@@ -21,32 +20,17 @@ final class DeploymentService
 
     protected string $homeOnHost;
 
-    protected EntityManagerInterface $entityManager;
-    protected BuildService $buildService;
-    protected GitService $gitService;
-    protected PackageService $packageService;
-    protected ReleaseService $releaseService;
-    protected SSHService $SSHService;
-    protected ChatterInterface $chatterService;
-
     public function __construct(
-        $magallanesHome,
-        EntityManagerInterface $entityManager,
-        GitService $gitService,
-        BuildService $buildService,
-        PackageService $packageService,
-        ReleaseService $releaseService,
-        SSHService $SSHService,
-        ChatterInterface $chatterService
+        string $magallanesHome,
+        protected EntityManagerInterface $entityManager,
+        protected GitService $gitService,
+        protected BuildService $buildService,
+        protected PackageService $packageService,
+        protected ReleaseService $releaseService,
+        protected SSHService $SSHService,
+        protected ChatterInterface $chatterService
     ) {
         $this->homeOnHost = $magallanesHome;
-        $this->entityManager = $entityManager;
-        $this->gitService = $gitService;
-        $this->buildService = $buildService;
-        $this->packageService = $packageService;
-        $this->releaseService = $releaseService;
-        $this->SSHService = $SSHService;
-        $this->chatterService = $chatterService;
     }
 
     private function getEntityManager(): EntityManagerInterface
@@ -198,20 +182,6 @@ final class DeploymentService
     }
 
 
-
-
-    public function requestDelete(Build $build): void
-    {
-        $build->setStatus(Build::STATUS_DELETE);
-        $this->entityManager->flush();
-    }
-
-    public function delete(Build $build): void
-    {
-        $this->releaseService->delete($build);
-        $this->packageService->delete($build, $this->getArtifactsPath($build));
-        $this->buildService->delete($build);
-    }
 
     public function requestRollback(Build $build, ?string $requestedBy = null): void
     {

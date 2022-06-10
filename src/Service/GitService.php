@@ -71,7 +71,10 @@ class GitService
         }
     }
 
-    protected function cloneRepository(Build $build, $repositoryPath, $gitSSHOptions): Process
+    /**
+     * @param array<string, string> $gitSSHOptions
+     */
+    protected function cloneRepository(Build $build, string $repositoryPath, array $gitSSHOptions): Process
     {
         $process = new Process([
             'git',

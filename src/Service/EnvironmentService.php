@@ -23,7 +23,7 @@ final class EnvironmentService
         return $this->sshService;
     }
 
-    public function create(Environment $environment)
+    public function create(Environment $environment): void
     {
         $key = $this->getSSHService()->generateEnvironmentKey($environment);
         $environment->setSSHPrivateKey($key->getPrivate());
@@ -33,7 +33,7 @@ final class EnvironmentService
         $this->getEntityManager()->flush();
     }
 
-    public function update(Environment $environment)
+    public function update(Environment $environment): void
     {
         $this->entityManager->flush();
     }

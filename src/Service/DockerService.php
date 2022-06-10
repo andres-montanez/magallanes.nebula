@@ -10,7 +10,11 @@ class DockerService
 {
     protected string $socket = '/var/run/docker.sock';
 
-    public function run(BuildStageStep $step, array $envVars, string $directory, ?array $options = [])
+    /**
+     * @param array<string, string> $envVars
+     * @param array<string, string> $options
+     */
+    public function run(BuildStageStep $step, array $envVars, string $directory, ?array $options = []): void
     {
         $command = EnvVars::replace($step->getDefinition(), $envVars);
         $image = EnvVars::replace($step->getStage()->getDocker(), $envVars);
@@ -110,7 +114,10 @@ class DockerService
         $response = json_decode($response->getContent(false), true);
     }
 
-    protected function getMemory(array $options)
+    /**
+     * @param array<string, string> $options
+     */
+    protected function getMemory(array $options): int
     {
         if (isset($options['memory']) && is_numeric($options['memory'])) {
             return ((int) $options['memory'] * 1024 * 1024);
@@ -119,7 +126,7 @@ class DockerService
         return 1024 * 1024 * 1024;
     }
 
-    protected function getUrl($uri): string
+    protected function getUrl(string $uri): string
     {
         return sprintf('http://docker%s', $uri);
     }

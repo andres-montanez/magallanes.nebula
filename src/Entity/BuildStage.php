@@ -36,6 +36,7 @@ class BuildStage
     #[Groups(['build-detail'])]
     protected ?string $docker = null;
 
+    /** @var Collection<int, BuildStageStep> */
     #[ORM\OneToMany(targetEntity: 'App\Entity\BuildStageStep', mappedBy: 'stage', cascade: ['persist', 'remove'])]
     #[Groups(['build-detail'])]
     protected Collection $steps;
@@ -151,9 +152,7 @@ class BuildStage
         return $this;
     }
 
-    /**
-     * @return BuildStageStep[]
-     */
+    /** @return Collection<int, BuildStageStep> */
     public function getSteps(): Collection
     {
         return $this->steps;

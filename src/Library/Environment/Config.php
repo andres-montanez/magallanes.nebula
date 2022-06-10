@@ -9,6 +9,7 @@ use Symfony\Component\Yaml\Yaml;
 
 final class Config
 {
+    /** @var array<string, mixed> */
     private array $config = [];
 
     public function __construct(Environment $environment)
@@ -24,6 +25,7 @@ final class Config
         );
     }
 
+    /** @return array<string, mixed> */
     public function getConfig(): array
     {
         return $this->config;

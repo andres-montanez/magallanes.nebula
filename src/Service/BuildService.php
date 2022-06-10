@@ -51,7 +51,7 @@ class BuildService
         return intval($this->getEntityManager()->getConnection()->fetchOne($sql, [$environment->getId()]));
     }
 
-    private function createStages(Build $build)
+    private function createStages(Build $build): void
     {
         $buildConfig = $build->getConfig();
 
@@ -126,7 +126,7 @@ class BuildService
         $this->entityManager->flush();
     }
 
-    public function build(Build $build, string $repositoryPath, string $repositoryPathOnHost)
+    public function build(Build $build, string $repositoryPath, string $repositoryPathOnHost): void
     {
         $failedStages = 0;
         $buildConfig = $build->getConfig();
@@ -181,7 +181,7 @@ class BuildService
                 }
             } catch (\Exception $e) {
                 $stage->setStatus(BuildStage::STATUS_FAILED);
-                if (isset($step) && $step instanceof BuildStageStep) {
+                if ($step instanceof BuildStageStep) {
                     $step->setStatus(BuildStageStep::STATUS_FAILED);
                 }
             } finally {

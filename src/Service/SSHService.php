@@ -40,9 +40,9 @@ final class SSHService
         return new Key($private, $publicWithComments);
     }
 
-    private function sshEncodePublicKey($privKey)
+    private function sshEncodePublicKey($privateKey): string
     {
-        $keyInfo = openssl_pkey_get_details($privKey);
+        $keyInfo = openssl_pkey_get_details($privateKey);
 
         $buffer  = sprintf(
             '%sssh-rsa%s%s',
@@ -54,7 +54,7 @@ final class SSHService
         return 'ssh-rsa ' . base64_encode($buffer);
     }
 
-    private function sshEncodeBuffer($buffer)
+    private function sshEncodeBuffer(string $buffer): string
     {
         $len = strlen($buffer);
         if (ord($buffer[0]) & 0x80) {

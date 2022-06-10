@@ -1,4 +1,10 @@
 parameters:
-    level: 7
+    level: 6
     paths:
         - src
+
+    excludePaths:
+        - src/Exception/InvalidPayloadException.php
+        - src/Library/Build/Config.php
+        - src/Library/Configuration/EnvironmentConfiguration.php
+        - src/Library/Configuration/ProjectConfiguration.php

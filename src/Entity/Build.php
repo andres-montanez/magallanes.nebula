@@ -27,7 +27,6 @@ class Build
     public const STATUS_FAILED = 'failed';
     public const STATUS_ROLLBACK = 'rollback';
     public const STATUS_ROLLBACKING = 'rollbacking';
-    public const STATUS_DELETE = 'delete';
 
     #[ORM\Id()]
     #[ORM\Column(name: 'build_id', type: 'string', length: 32, unique: true)]
@@ -67,6 +66,7 @@ class Build
     #[Groups(['build-list', 'build-detail'])]
     private ?\DateTimeImmutable $finishedAt = null;
 
+    /** @var Collection<int, BuildStage> */
     #[ORM\OneToMany(targetEntity: 'App\Entity\BuildStage', mappedBy: 'build', cascade: ['persist', 'remove'])]
     #[Groups(['build-detail'])]
     private Collection $stages;
@@ -220,9 +220,7 @@ class Build
         return $this;
     }
 
-    /**
-     * @return BuildStage[]
-     */
+    /** @return Collection<int, BuildStage> */
     public function getStages(): Collection
     {
         return $this->stages;

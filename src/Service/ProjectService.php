@@ -32,7 +32,7 @@ final class ProjectService
         return $this->sshService;
     }
 
-    public function create(Project $project)
+    public function create(Project $project): void
     {
         $key = $this->getSSHService()->generateProjectKey($project);
         $project->setRepositorySSHPrivateKey($key->getPrivate());
@@ -43,7 +43,7 @@ final class ProjectService
         $this->getEntityManager()->flush();
     }
 
-    public function update(Project $project)
+    public function update(Project $project): void
     {
         $this->getEntityManager()->flush();
     }
