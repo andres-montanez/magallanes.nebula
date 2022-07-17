@@ -7,9 +7,10 @@ use App\Entity\Build;
 use App\Library\Environment\Config;
 use App\Library\Tool\EnvVars;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Yaml\Yaml;
+use Symfony\Component\Notifier\ChatterInterface;
+use Symfony\Component\Notifier\Message\ChatMessage;
 
-class DeploymentService
+final class DeploymentService
 {
     public const LOCAL_HOME = '/home/magallanes';
     protected const POST_TASK_SUCCESS = 'success';
@@ -19,30 +20,44 @@ class DeploymentService
 
     protected string $homeOnHost;
 
-    protected EntityManagerInterface $entityManager;
-    protected BuildService $buildService;
-    protected GitService $gitService;
-    protected PackageService $packageService;
-    protected ReleaseService $releaseService;
-    protected SSHService $SSHService;
-
     public function __construct(
-        $magallanesHome,
-        EntityManagerInterface $entityManager,
-        GitService $gitService,
-        BuildService $buildService,
-        PackageService $packageService,
-        ReleaseService $releaseService,
-        SSHService $SSHService
-    )
-    {
+        string $magallanesHome,
+        protected EntityManagerInterface $entityManager,
+        protected GitService $gitService,
+        protected BuildService $buildService,
+        protected PackageService $packageService,
+        protected ReleaseService $releaseService,
+        protected SSHService $SSHService,
+        protected ChatterInterface $chatterService
+    ) {
         $this->homeOnHost = $magallanesHome;
-        $this->entityManager = $entityManager;
-        $this->gitService = $gitService;
-        $this->buildService = $buildService;
-        $this->packageService = $packageService;
-        $this->releaseService = $releaseService;
-        $this->SSHService = $SSHService;
+    }
+
+    private function getEntityManager(): EntityManagerInterface
+    {
+        return $this->entityManager;
+    }
+
+    private function getBuildService(): BuildService
+    {
+        return $this->buildService;
+    }
+
+    public function request(Environment $environment, ?string $branch = null, ?string $requestedBy = null): Build
+    {
+        if ($branch === null) {
+            $branch = $environment->getBranch();
+        }
+
+        // Create Build
+        $build = $this->getBuildService()->create($environment, $branch);
+        $build->setRequestedBy($requestedBy);
+
+        // Persist Build
+        $this->getEntityManager()->persist($build);
+        $this->getEntityManager()->flush();
+
+        return $build;
     }
 
     public function getBuildToProcess(): ?Build
@@ -59,28 +74,11 @@ class DeploymentService
         return $build;
     }
 
-    public function request(Environment $environment, ?string $branch = null, ?string $requestedBy = null): Build
-    {
-        if ($branch === null) {
-            $branch = $environment->getBranch();
-        }
-
-        // Create Build
-        $build = $this->buildService->create($environment, $branch);
-        $build->setRequestedBy($requestedBy);
-
-        $this->entityManager->persist($build);
-        $this->entityManager->flush();
-
-        return $build;
-    }
-
     public function checkout(Build $build): void
     {
         $build
             ->setStartedAt(new \DateTimeImmutable('now'))
-            ->setStatus(Build::STATUS_CHECKING_OUT)
-        ;
+            ->setStatus(Build::STATUS_CHECKING_OUT);
         $this->entityManager->flush();
 
         try {
@@ -89,8 +87,7 @@ class DeploymentService
         } catch (\Throwable $exception) {
             $build
                 ->setStatus(Build::STATUS_FAILED)
-                ->setFinishedAt(new \DateTimeImmutable('now'))
-            ;
+                ->setFinishedAt(new \DateTimeImmutable('now'));
             $this->notify($build, self::NOTIFY_FAILURE);
         }
 
@@ -108,9 +105,15 @@ class DeploymentService
             $this->getRepositoryPathOnHost($build)
         );
 
+        if ($build->getStatus() === Build::STATUS_FAILED) {
+            $build->setFinishedAt(new \DateTimeImmutable());
+            $this->entityManager->flush();
+            $this->notify($build, self::NOTIFY_FAILURE);
+            return;
+        }
+
         $build->setStatus(Build::STATUS_BUILT);
         $this->entityManager->flush();
-
     }
 
     public function package(Build $build): void
@@ -143,16 +146,20 @@ class DeploymentService
 
         $build
             ->setStatus(Build::STATUS_SUCCESSFUL)
-            ->setFinishedAt(new \DateTimeImmutable('now'))
-        ;
+            ->setFinishedAt(new \DateTimeImmutable('now'));
         $this->entityManager->flush();
         $this->notify($build, self::NOTIFY_SUCCESS);
 
-        $this->cleanup($build->getEnvironment());
+        $this->cleanup($build);
     }
 
-    public function cleanup(Environment $environment): void
+    public function cleanup(Build $build): void
     {
+        // Cleanup Repository
+        $this->gitService->cleanup($this->getRepositoryPath($build));
+
+        // Gather info
+        $environment = $build->getEnvironment();
         $environmentConfig = new Config($environment);
         $releasesToKeep = $environmentConfig->getReleasesToKeep();
         $buildsToKeep = $environmentConfig->getBuildsToKeep();
@@ -174,18 +181,7 @@ class DeploymentService
         }
     }
 
-    public function requestDelete(Build $build): void
-    {
-        $build->setStatus(Build::STATUS_DELETE);
-        $this->entityManager->flush();
-    }
 
-    public function delete(Build $build): void
-    {
-        $this->releaseService->delete($build);
-        $this->packageService->delete($build, $this->getArtifactsPath($build));
-        $this->buildService->delete($build);
-    }
 
     public function requestRollback(Build $build, ?string $requestedBy = null): void
     {
@@ -196,8 +192,7 @@ class DeploymentService
     {
         $build
             ->setStartedAt(new \DateTimeImmutable('now'))
-            ->setStatus(Build::STATUS_ROLLBACKING)
-        ;
+            ->setStatus(Build::STATUS_ROLLBACKING);
         $this->entityManager->flush();
 
         $this->packageService->copyBuild($build, $this->getArtifactsPath($build));
@@ -205,22 +200,12 @@ class DeploymentService
 
     protected function getRepositoryPath(Build $build): string
     {
-        return sprintf(
-            '%s/repositories/%s/%s',
-            self::LOCAL_HOME,
-            $build->getEnvironment()->getProject()->getCode(),
-            $build->getEnvironment()->getCode()
-        );
+        return sprintf('%s/repositories/%s', self::LOCAL_HOME, $build->getId());
     }
 
     protected function getRepositoryPathOnHost(Build $build): string
     {
-        return sprintf(
-            '%s/repositories/%s/%s',
-            $this->homeOnHost,
-            $build->getEnvironment()->getProject()->getCode(),
-            $build->getEnvironment()->getCode()
-        );
+        return sprintf('%s/repositories/%s', $this->homeOnHost, $build->getId());
     }
 
     protected function getArtifactsPath(Build $build): string
@@ -235,7 +220,13 @@ class DeploymentService
 
     protected function notify(Build $build, string $type): void
     {
+        $config = $build->getConfig()->getGlobalPost();
+        $messageText = EnvVars::replace($config[$type]['slack']['message'], $build->getConfig()->getEnvVars());
+        $message = new ChatMessage($messageText);
 
+        //$message->options((new SlackOptions())->channel('myChannel');
+
+        $this->chatterService->send($message);
     }
 
     protected function executePostTasks(Build $build, string $type): void

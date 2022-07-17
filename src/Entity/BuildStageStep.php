@@ -2,13 +2,12 @@
 
 namespace App\Entity;
 
+use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 use Doctrine\ORM\Mapping as ORM;
 
-/**
- * @ORM\Entity()
- * @ORM\Table(name="build_stage_step")
- */
+#[ORM\Entity()]
+#[ORM\Table(name: 'build_stage_step')]
 class BuildStageStep
 {
     public const STATUS_PENDING = 'pending';
@@ -17,49 +16,39 @@ class BuildStageStep
     public const STATUS_FAILED = 'failed';
     public const TYPE_CMD = 'cmd';
 
-    /**
-     * @ORM\Id()
-     * @ORM\GeneratedValue()
-     * @ORM\Column(name="step_id", type="integer", nullable=false)
-     */
+    #[ORM\Id()]
+    #[ORM\GeneratedValue()]
+    #[ORM\Column(name: 'step_id', type: 'integer', nullable: false)]
+    #[Groups(['build-detail'])]
     protected int $id;
 
-    /**
-     * @ORM\ManyToOne(targetEntity="App\Entity\BuildStage", inversedBy="steps")
-     * @ORM\JoinColumn(name="step_stage", referencedColumnName="stage_id", nullable=false)
-     *
-     * @Assert\NotNull()
-     */
+    #[ORM\ManyToOne(targetEntity: 'App\Entity\BuildStage', inversedBy: 'steps')]
+    #[ORM\JoinColumn(name: 'step_stage', referencedColumnName: 'stage_id', nullable: false)]
+    #[Assert\NotNull()]
     protected BuildStage $stage;
 
-    /**
-     * @ORM\Column(name="step_type", type="string", length=12, nullable=false)
-     */
+    #[ORM\Column(name: 'step_type', type: 'string', length: 12, nullable: false)]
+    #[Groups(['build-detail'])]
     protected string $type;
 
-    /**
-     * @ORM\Column(name="step_definition", type="text", nullable=false)
-     */
+    #[ORM\Column(name: 'step_definition', type: 'text', nullable: false)]
+    #[Groups(['build-detail'])]
     protected string $definition;
 
-    /**
-     * @ORM\Column(name="step_time", type="integer", nullable=false)
-     */
+    #[ORM\Column(name: 'step_time', type: 'integer', nullable: false)]
+    #[Groups(['build-detail'])]
     protected int $time = 0;
 
-    /**
-     * @ORM\Column(name="step_status", type="string", length=12, nullable=false)
-     */
+    #[ORM\Column(name: 'step_status', type: 'string', length: 12, nullable: false)]
+    #[Groups(['build-detail'])]
     protected string $status = self::STATUS_PENDING;
 
-    /**
-     * @ORM\Column(name="step_std_out", type="text", nullable=true)
-     */
+    #[ORM\Column(name: 'step_std_out', type: 'text', nullable: true)]
+    #[Groups(['build-detail'])]
     protected ?string $stdOut = null;
 
-    /**
-     * @ORM\Column(name="step_std_err", type="text", nullable=true)
-     */
+    #[ORM\Column(name: 'step_std_err', type: 'text', nullable: true)]
+    #[Groups(['build-detail'])]
     protected ?string $stdErr = null;
 
     public function getId(): int
@@ -143,6 +132,4 @@ class BuildStageStep
         $this->stdErr = $stdErr;
         return $this;
     }
-
-
 }

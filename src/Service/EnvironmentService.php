@@ -7,22 +7,33 @@ use App\Entity\Project;
 use App\Entity\Environment;
 use Doctrine\ORM\EntityManagerInterface;
 
-class EnvironmentService
+final class EnvironmentService
 {
-    protected EntityManagerInterface $entityManager;
-
-    public function __construct(EntityManagerInterface $entityManager)
+    public function __construct(private SSHService $sshService, private EntityManagerInterface $entityManager)
     {
-        $this->entityManager = $entityManager;
     }
 
-    public function create(Environment $environment)
+    private function getEntityManager(): EntityManagerInterface
     {
-        $this->entityManager->persist($environment);
-        $this->entityManager->flush();
+        return $this->entityManager;
     }
 
-    public function update(Environment $environment)
+    private function getSSHService(): SSHService
+    {
+        return $this->sshService;
+    }
+
+    public function create(Environment $environment): void
+    {
+        $key = $this->getSSHService()->generateEnvironmentKey($environment);
+        $environment->setSSHPrivateKey($key->getPrivate());
+        $environment->setSSHPublicKey($key->getPublic());
+
+        $this->getEntityManager()->persist($environment);
+        $this->getEntityManager()->flush();
+    }
+
+    public function update(Environment $environment): void
     {
         $this->entityManager->flush();
     }
@@ -30,7 +41,7 @@ class EnvironmentService
     /**
      * @return Environment[]
      */
-    public function getEnvironments(Project $project): array
+    public function getCollection(Project $project): array
     {
         return $this->entityManager->getRepository(Environment::class)->findBy(
             ['project' => $project],
@@ -38,56 +49,40 @@ class EnvironmentService
         );
     }
 
-    /**
-     * @return Build[]
-     */
-    public function getBuilds(Environment $environment): array
+    public function get(string $id): ?Environment
     {
-        return $this->entityManager->getRepository(Build::class)->findBy(
+        return $this->entityManager->getRepository(Environment::class)->findOneBy([
+            'id' => $id,
+        ]);
+    }
+
+    public function getLastBuild(Environment $environment): ?Build
+    {
+        return $this->entityManager->getRepository(Build::class)->findOneBy(
             ['environment' => $environment],
-            ['number' => 'DESC']
+            ['createdAt' => 'DESC']
         );
     }
 
-    public function getLastSuccessful(Environment $environment): ?Build
+    public function getLastSuccessBuild(Environment $environment): ?Build
     {
-        /** @var Build $build */
-        $build = $this->entityManager->getRepository(Build::class)->findOneBy(
+        return $this->entityManager->getRepository(Build::class)->findOneBy(
             [
                 'environment' => $environment,
-                'status' =>  Build::STATUS_SUCCESSFUL
+                'status' => Build::STATUS_SUCCESSFUL,
             ],
-            ['number' => 'DESC']
+            ['createdAt' => 'DESC']
         );
-
-        return $build;
     }
 
-    public function getLastFailed(Environment $environment): ?Build
+    public function getLastFailBuild(Environment $environment): ?Build
     {
-        /** @var Build $build */
-        $build = $this->entityManager->getRepository(Build::class)->findOneBy(
+        return $this->entityManager->getRepository(Build::class)->findOneBy(
             [
                 'environment' => $environment,
-                'status' =>  Build::STATUS_FAILED
+                'status' => Build::STATUS_FAILED,
             ],
-            ['number' => 'DESC']
+            ['createdAt' => 'DESC']
         );
-
-        return $build;
-    }
-
-    public function getRunning(Environment $environment): ?Build
-    {
-        /** @var Build $build */
-        $build = $this->entityManager->getRepository(Build::class)->findOneBy(
-            [
-                'environment' => $environment,
-                'finishedAt' =>  null
-            ],
-            ['number' => 'DESC']
-        );
-
-        return $build;
     }
 }

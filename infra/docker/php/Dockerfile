@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # Packages
 RUN apt-get update -y && apt-get upgrade -y && \
     apt-get install -y --no-install-recommends software-properties-common && add-apt-repository -y ppa:ondrej/php && apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates curl vim git unzip \
+    apt-get install -y --no-install-recommends ca-certificates curl vim git unzip ssh-client \
         php8.0-cli php8.0-fpm php8.0-xml php8.0-mysql php8.0-curl php8.0-ssh2 php8.0-mbstring php8.0-zip php8.0-intl && \
     apt-get autoremove --purge -y && apt-get clean && rm -rf /var/lib/apt/lists/*
 

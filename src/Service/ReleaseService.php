@@ -22,7 +22,7 @@ class ReleaseService
         $deployStrategy->delete($build, $deployOptions);
     }
 
-    public function release(Build $build, string $artifactsPath)
+    public function release(Build $build, string $artifactsPath): void
     {
         $deployOptions = $build->getConfig()->getDeploymentOptions();
         $deployStrategy = new SCPStrategy();

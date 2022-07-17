@@ -3,84 +3,77 @@
 namespace App\Entity;
 
 use App\Validator as AppAssert;
+use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer\Annotation\Ignore;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Validator\Constraints as Assert;
 use Doctrine\ORM\Mapping as ORM;
 
-/**
- * @ORM\Entity(repositoryClass="App\Repository\ProjectRepository")
- * @ORM\Table(name="project")
- */
+#[ORM\Entity(repositoryClass: 'App\Repository\ProjectRepository')]
+#[ORM\Table(name: 'project')]
 class Project
 {
-    /**
-     * @ORM\Id()
-     * @ORM\GeneratedValue(strategy="UUID")
-     * @ORM\Column(name="project_id", type="string", length=36, nullable=false)
-     */
-    protected string $id;
+    #[ORM\Id()]
+    #[ORM\Column(name: 'project_id', type: 'string', length: 36, unique: true)]
+    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
+    #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
+    #[Groups(['project-list', 'project-detail', 'environment-detail', 'environment-summary', 'build-detail'])]
+    private ?string $id = null;
 
-    /**
-     * @ORM\Column(name="project_code", type="string", length=12, nullable=false, unique=true)
-     *
-     * @Assert\NotNull()
-     * @Assert\NotBlank()
-     * @Assert\Length(min=3, max=12)
-     */
-    protected string $code;
+    #[ORM\Column(name: 'project_code', type: 'string', length: 32, nullable: false, unique: true)]
+    #[Assert\NotNull()]
+    #[Assert\NotBlank()]
+    #[Assert\Length(min: 3, max: 32)]
+    #[Groups(['project-list', 'project-detail', 'environment-detail', 'environment-summary', 'build-detail'])]
+    private string $code;
 
-    /**
-     * @ORM\Column(name="project_name", type="string", length=32, nullable=false)
-     *
-     * @Assert\NotNull()
-     * @Assert\NotBlank()
-     * @Assert\Length(min=3, max=32)
-     */
-    protected string $name;
+    #[ORM\Column(name: 'project_name', type: 'string', length: 32, nullable: false)]
+    #[Assert\NotNull()]
+    #[Assert\NotBlank()]
+    #[Assert\Length(min: 3, max: 32)]
+    #[Groups(['project-list', 'project-detail', 'environment-detail', 'environment-summary', 'build-detail'])]
+    private string $name;
 
-    /**
-     * @ORM\Column(name="project_description", type="string", length=128, nullable=true)
-     *
-     * @Assert\Length(max=128)
-     */
-    protected ?string $description = null;
+    #[ORM\Column(name: 'project_description', type: 'string', length: 128, nullable: true)]
+    #[Assert\Length(max: 128)]
+    #[Groups(['project-list', 'project-detail'])]
+    private ?string $description = null;
 
-    /**
-     * @ORM\Column(name="project_repository", type="string", length=192, nullable=false)
-     *
-     * @Assert\NotNull()
-     * @Assert\NotBlank()
-     * @Assert\Length(max=192)
-     */
-    protected string $repository;
+    #[ORM\Column(name: 'project_repository', type: 'string', length: 192, nullable: false)]
+    #[Assert\NotNull()]
+    #[Assert\NotBlank()]
+    #[Assert\Length(max: 192)]
+    #[Groups(['project-detail'])]
+    private string $repository;
 
-    /**
-     * @ORM\Column(name="project_repository_ssh_key", type="text", nullable=true)
-     *
-     * @Assert\NotBlank(allowNull=true)
-     */
-    protected ?string $repositorySSHKey = null;
+    #[ORM\Column(name: 'project_repository_ssh_private_key', type: 'text', nullable: true)]
+    #[Assert\NotBlank(allowNull: true)]
+    #[Ignore]
+    private ?string $repositorySSHPrivateKey = null;
 
-    /**
-     * @ORM\Column(name="project_config", type="text", nullable=true)
-     *
-     * @Assert\NotBlank(allowNull=true)
-     * @AppAssert\ProjectConfig()
-     */
-    protected ?string $config = null;
+    #[ORM\Column(name: 'project_repository_ssh_public_key', type: 'text', nullable: true)]
+    #[Assert\NotBlank(allowNull: true)]
+    #[Groups(['project-detail'])]
+    private ?string $repositorySSHPublicKey = null;
 
-    /**
-     * @ORM\OneToMany(targetEntity="App\Entity\Environment", mappedBy="project")
-     */
-    protected Collection $environments;
+    #[ORM\Column(name: 'project_config', type: 'text', nullable: true)]
+    #[Assert\NotBlank(allowNull: true)]
+    #[AppAssert\ProjectConfig()]
+    #[Groups(['project-detail'])]
+    private ?string $config = null;
+
+    /** @var Collection<string, Environment> */
+    #[ORM\OneToMany(targetEntity: 'App\Entity\Environment', mappedBy: 'project')]
+    #[Ignore]
+    private Collection $environments;
 
     public function __construct()
     {
         $this->environments = new ArrayCollection();
     }
 
-    public function getId(): string
+    public function getId(): ?string
     {
         return $this->id;
     }
@@ -129,14 +122,25 @@ class Project
         return $this;
     }
 
-    public function getRepositorySSHKey(): ?string
+    public function getRepositorySSHPrivateKey(): ?string
     {
-        return $this->repositorySSHKey;
+        return $this->repositorySSHPrivateKey;
     }
 
-    public function setRepositorySSHKey(?string $repositorySSHKey): self
+    public function setRepositorySSHPrivateKey(?string $repositorySSHPrivateKey): self
     {
-        $this->repositorySSHKey = $repositorySSHKey;
+        $this->repositorySSHPrivateKey = $repositorySSHPrivateKey;
+        return $this;
+    }
+
+    public function getRepositorySSHPublicKey(): ?string
+    {
+        return $this->repositorySSHPublicKey;
+    }
+
+    public function setRepositorySSHPublicKey(?string $repositorySSHPublicKey): self
+    {
+        $this->repositorySSHPublicKey = $repositorySSHPublicKey;
         return $this;
     }
 
@@ -151,9 +155,7 @@ class Project
         return $this;
     }
 
-    /**
-     * @return Environment[]
-     */
+    /** @return Collection<string, Environment> */
     public function getEnvironments(): Collection
     {
         return $this->environments;
@@ -167,7 +169,7 @@ class Project
 
     public function removeEnvironment(Environment $environment): self
     {
-        $this->environments->remove($environment);
+        $this->environments->remove($environment->getId());
         return $this;
     }
 }

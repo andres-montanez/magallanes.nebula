@@ -3,100 +3,107 @@
 namespace App\Controller;
 
 use App\Entity\Project;
-use App\Form\Type\ProjectType;
 use App\Service\ProjectService;
+use App\Exception\InvalidPayloadException;
+use App\Library\Controller\DeserializeTrait;
+use App\Service\EnvironmentService;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
-class ProjectController extends AbstractController
+final class ProjectController extends AbstractController
 {
-    protected ProjectService $projectService;
-    protected SerializerInterface $serializer;
+    use DeserializeTrait;
 
-    public function __construct(ProjectService $projectService, SerializerInterface $serializer)
-    {
-        $this->projectService = $projectService;
-        $this->serializer = $serializer;
+    public function __construct(
+        private ProjectService $projectService,
+        private EnvironmentService $environmentService,
+        private SerializerInterface $serializer,
+        private ValidatorInterface $validator
+    ) {
     }
 
-    /**
-     * @Route("/api/projects", name="mage_api_projects", methods={"GET"})
-     */
-    public function apiIndex(): Response
+    #[Route('/api/project', name: 'mage_api_project_collection', methods: ['GET'])]
+    public function collection(): Response
     {
-        $this->denyAccessUnlessGranted('ROLE_PROJECT_LIST');
-
-        $projects = $this->projectService->getProjects();
-        return $this->json($projects, Response::HTTP_OK, [], ['list']);
+        $projects = $this->projectService->getCollection();
+        return $this->json($projects, Response::HTTP_OK, [], ['groups' => ['project-list']]);
     }
 
-    /**
-     * @Route("/api/projects/{id}", name="mage_api_projects_detail", methods={"GET"})
-     */
-    public function apiDetail(Project $project): Response
+    #[Route('/api/project/{id}', name: 'mage_api_project_get', methods: ['GET'])]
+    public function get(string $id): Response
     {
-        $this->denyAccessUnlessGranted('ROLE_PROJECT_EDIT');
+        $project = $this->projectService->get($id);
+        if ($project instanceof Project) {
+            return $this->json($project, Response::HTTP_OK, [], ['groups' => ['project-detail']]);
+        }
 
-        return $this->json($project, Response::HTTP_OK, [], ['detail']);
+        throw new NotFoundHttpException(sprintf('Project "%s" not found.', $id));
     }
 
-    /**
-     * @Route("/projects", name="mage_projects")
-     */
-    public function index(): Response
+    #[Route('/api/project', name: 'mage_api_project_post', methods: ['POST'])]
+    public function post(Request $request): Response
     {
-        $this->denyAccessUnlessGranted('ROLE_PROJECT_LIST');
-        return $this->render('projects/index.html.twig');
-    }
-
-    /**
-     * @Route("/project/new", name="mage_project_new")
-     */
-    public function new(Request $request): Response
-    {
-        $this->denyAccessUnlessGranted('ROLE_PROJECT_NEW');
-
         $project = new Project();
-        $form = $this->createForm(ProjectType::class, $project);
+        $this->deserialize($project, strval($request->getContent()));
 
-        $form->handleRequest($request);
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->projectService->create($project);
-
-            $this->addFlash('success', sprintf('Project %s created', $project->getName()));
-
-            return $this->redirectToRoute('mage_projects');
+        $errors = $this->validator->validate($project);
+        if (count($errors) > 0) {
+            throw new InvalidPayloadException('Invalid payload.', $errors);
         }
 
-        return $this->render('projects/detail.html.twig', [
-            'form' => $form->createView()
-        ]);
+        $this->projectService->create($project);
+        return $this->json($project, Response::HTTP_OK, [], ['groups' => ['project-detail']]);
     }
 
-    /**
-     * @Route("/project/{id}", name="mage_project_detail")
-     */
-    public function detail(Project $project, Request $request): Response
+    #[Route('/api/project/{id}', name: 'mage_api_project_patch', methods: ['PATCH'])]
+    public function patch(Request $request, string $id): Response
     {
-        $this->denyAccessUnlessGranted('ROLE_PROJECT_EDIT');
-
-        $form = $this->createForm(ProjectType::class, $project);
-
-        $form->handleRequest($request);
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->projectService->update($project);
-
-            $this->addFlash('success', sprintf('Project %s updated', $project->getName()));
-
-            return $this->redirectToRoute('mage_projects');
+        $project = $this->projectService->get($id);
+        if (!$project instanceof Project) {
+            return $this->json($project, Response::HTTP_OK, [], ['groups' => ['project-detail']]);
         }
 
-        return $this->render('projects/detail.html.twig', [
-            'project' => $project,
-            'form' => $form->createView()
-        ]);
+        $this->deserialize($project, strval($request->getContent()));
+
+        $errors = $this->validator->validate($project);
+        if (count($errors) > 0) {
+            throw new InvalidPayloadException('Invalid payload.', $errors);
+        }
+
+        $this->projectService->update($project);
+        return $this->json($project, Response::HTTP_OK, [], ['groups' => ['project-detail']]);
+    }
+
+    #[Route('/api/project/{id}/environments', name: 'mage_api_environment_collection', methods: ['GET'])]
+    public function environments(string $id): Response
+    {
+        $project = $this->projectService->get($id);
+        if (!$project instanceof Project) {
+            throw new NotFoundHttpException(sprintf('Project "%s" not found.', $id));
+        }
+
+        $response = [];
+        $environments = $this->environmentService->getCollection($project);
+        foreach ($environments as $environment) {
+            $lastBuild = $this->environmentService->getLastBuild($environment);
+            $lastSuccessBuild = $this->environmentService->getLastSuccessBuild($environment);
+            $lastFailBuild = $this->environmentService->getLastFailBuild($environment);
+
+            $response[] = [
+                'id' => $environment->getId(),
+                'code' => $environment->getCode(),
+                'name' => $environment->getName(),
+                'lastBuild' => $lastBuild,
+                'lastSuccess' => $lastSuccessBuild,
+                'lastFailure' => $lastFailBuild,
+            ];
+        }
+
+        return $this->json($response, Response::HTTP_OK, [], ['groups' => ['environment-list']]);
     }
 }

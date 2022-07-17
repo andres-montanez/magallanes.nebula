@@ -7,9 +7,10 @@ use App\Library\Configuration\EnvironmentConfiguration;
 use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\Yaml\Yaml;
 
-class Config
+final class Config
 {
-    protected array $config = [];
+    /** @var array<string, mixed> */
+    private array $config = [];
 
     public function __construct(Environment $environment)
     {
@@ -24,6 +25,7 @@ class Config
         );
     }
 
+    /** @return array<string, mixed> */
     public function getConfig(): array
     {
         return $this->config;

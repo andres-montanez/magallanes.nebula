@@ -3,85 +3,83 @@
 namespace App\Entity;
 
 use App\Validator as AppAssert;
+use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer\Annotation\Ignore;
 use Symfony\Component\Validator\Constraints as Assert;
 use Doctrine\ORM\Mapping as ORM;
 
-/**
- * @ORM\Entity()
- * @ORM\Table(name="environment",
- *    uniqueConstraints={@ORM\UniqueConstraint(columns={"environment_project", "environment_code"})}
- * )
- */
+#[ORM\Entity()]
+#[ORM\Table(name: 'environment')]
+#[ORM\UniqueConstraint(name: 'unq_environment_code', columns: ['environment_project', 'environment_code'])]
 class Environment
 {
-    /**
-     * @ORM\Id()
-     * @ORM\GeneratedValue(strategy="UUID")
-     * @ORM\Column(name="environment_id", type="string", length=36, nullable=false)
-     */
-    protected string $id;
+    public const WEBHOOK_DISABLED = 'disabled';
+    public const WEBHOOK_PUSH = 'push';
+    public const WEBHOOK_RELEASE = 'release';
+    private const WEBHOOK_OPTIONS = [
+        self::WEBHOOK_DISABLED,
+        self::WEBHOOK_PUSH,
+        self::WEBHOOK_RELEASE,
+    ];
 
-    /**
-     * @ORM\ManyToOne(targetEntity="App\Entity\Project", inversedBy="environments")
-     * @ORM\JoinColumn(name="environment_project", referencedColumnName="project_id", nullable=false)
-     *
-     * @Assert\NotNull()
-     */
-    protected Project $project;
+    #[ORM\Id()]
+    #[ORM\Column(name: 'environment_id', type: 'string', length: 36, unique: true)]
+    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
+    #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
+    #[Groups(['environment-list', 'environment-detail', 'build-detail'])]
+    private ?string $id = null;
 
-    /**
-     * @ORM\ManyToOne(targetEntity="App\Entity\UserGroup")
-     * @ORM\JoinColumn(name="environment_group", referencedColumnName="group_id", nullable=false)
-     *
-     * @Assert\NotNull()
-     */
-    protected UserGroup $group;
+    #[ORM\ManyToOne(targetEntity: 'App\Entity\Project', inversedBy: 'environments')]
+    #[ORM\JoinColumn(name: 'environment_project', referencedColumnName: 'project_id', nullable: false)]
+    #[Assert\NotNull()]
+    #[Groups(['environment-detail', 'environment-summary', 'build-detail'])]
+    private Project $project;
 
-    /**
-     * @ORM\Column(name="environment_code", type="string", length=12, nullable=false)
-     * @Assert\NotNull()
-     * @Assert\NotBlank()
-     * @Assert\Length(min=3, max=12)
-     */
-    protected string $code;
+    #[ORM\Column(name: 'environment_code', type: 'string', length: 12, nullable: false)]
+    #[Assert\NotNull()]
+    #[Assert\NotBlank()]
+    #[Assert\Length(min: 3, max: 12)]
+    #[Groups(['environment-list', 'environment-detail', 'build-detail'])]
+    private string $code;
 
-    /**
-     * @ORM\Column(name="environment_name", type="string", length=32, nullable=false)
-     * @Assert\NotNull()
-     * @Assert\NotBlank()
-     * @Assert\Length(min=3, max=32)
-     */
-    protected string $name;
+    #[ORM\Column(name: 'environment_name', type: 'string', length: 32, nullable: false)]
+    #[Assert\NotNull()]
+    #[Assert\NotBlank()]
+    #[Assert\Length(min: 3, max: 32)]
+    #[Groups(['environment-list', 'environment-detail', 'build-detail'])]
+    private string $name;
 
-    /**
-     * @ORM\Column(name="environment_branch", type="string", length=128, nullable=false)
-     * @Assert\NotNull()
-     * @Assert\NotBlank()
-     * @Assert\Length(max=128)
-     */
-    protected string $branch;
+    #[ORM\Column(name: 'environment_branch', type: 'string', length: 128, nullable: false)]
+    #[Assert\NotNull()]
+    #[Assert\NotBlank()]
+    #[Assert\Length(max: 128)]
+    #[Groups(['environment-detail'])]
+    private string $branch;
 
-    /**
-     * @ORM\Column(name="environment_config", type="text", nullable=false)
-     * @Assert\NotNull()
-     * @Assert\NotBlank()
-     * @AppAssert\EnvironmentConfig()
-     */
-    protected string $config;
+    #[ORM\Column(name: 'environment_webhook', type: 'string', length: 12, nullable: false)]
+    #[Assert\NotNull()]
+    #[Assert\Choice(choices: self::WEBHOOK_OPTIONS)]
+    #[Groups(['environment-detail'])]
+    private string $webhook = self::WEBHOOK_DISABLED;
 
-    /**
-     * @ORM\Column(name="environment_ssh_key", type="text", nullable=true)
-     * @Assert\NotBlank(allowNull=true)
-     */
-    protected ?string $sshKey = null;
+    #[ORM\Column(name: 'environment_config', type: 'text', nullable: false)]
+    #[Assert\NotNull()]
+    #[Assert\NotBlank()]
+    #[AppAssert\EnvironmentConfig()]
+    #[Groups(['environment-detail'])]
+    private string $config;
 
-    /**
-     * @ORM\Column(name="environment_ssh_public_key", type="text", nullable=true)
-     * @Assert\NotBlank(allowNull=true)
-     */
-    protected ?string $sshPublicKey = null;
+    #[ORM\Column(name: 'environment_ssh_private_key', type: 'text', nullable: true)]
+    #[Assert\NotBlank(allowNull: true)]
+    #[Ignore]
+    private ?string $sshPrivateKey = null;
 
-    public function getId(): string
+    #[ORM\Column(name: 'environment_ssh_public_key', type: 'text', nullable: true)]
+    #[Assert\NotBlank(allowNull: true)]
+    #[Groups(['environment-detail'])]
+    private ?string $sshPublicKey = null;
+
+    public function getId(): ?string
     {
         return $this->id;
     }
@@ -94,17 +92,6 @@ class Environment
     public function setProject(Project $project): self
     {
         $this->project = $project;
-        return $this;
-    }
-
-    public function getGroup(): UserGroup
-    {
-        return $this->group;
-    }
-
-    public function setGroup(UserGroup $group): self
-    {
-        $this->group = $group;
         return $this;
     }
 
@@ -141,6 +128,17 @@ class Environment
         return $this;
     }
 
+    public function getWebhook(): string
+    {
+        return $this->webhook;
+    }
+
+    public function setWebhook(string $webhook): self
+    {
+        $this->webhook = $webhook;
+        return $this;
+    }
+
     public function getConfig(): string
     {
         return $this->config;
@@ -152,14 +150,14 @@ class Environment
         return $this;
     }
 
-    public function getSSHKey(): ?string
+    public function getSSHPrivateKey(): ?string
     {
-        return $this->sshKey;
+        return $this->sshPrivateKey;
     }
 
-    public function setSSHKey(?string $sshKey): self
+    public function setSSHPrivateKey(?string $sshPrivateKey): self
     {
-        $this->sshKey = $sshKey;
+        $this->sshPrivateKey = $sshPrivateKey;
         return $this;
     }
 

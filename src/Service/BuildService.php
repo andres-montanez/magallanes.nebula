@@ -12,25 +12,20 @@ use Symfony\Component\Process\Process;
 
 class BuildService
 {
-    protected EntityManagerInterface $entityManager;
-    protected DockerService $dockerService;
-
-    public function __construct(EntityManagerInterface $entityManager, DockerService $dockerService)
+    public function __construct(private EntityManagerInterface $entityManager, private DockerService $dockerService)
     {
-        $this->entityManager = $entityManager;
-        $this->dockerService = $dockerService;
     }
 
-    /**
-     * @return Build[]
-     */
-    public function getBuilds(Environment $environment): array
+    private function getEntityManager(): EntityManagerInterface
     {
-        $repository = $this->entityManager->getRepository(Build::class);
-        return $repository->findBy([
-            'environment' => $environment,
-            'status' => Build::STATUS_SUCCESSFUL
-        ], ['number' => 'DESC']);
+        return $this->entityManager;
+    }
+
+    public function get(string $id): ?Build
+    {
+        return $this->getEntityManager()->getRepository(Build::class)->findOneBy([
+            'id' => $id,
+        ]);
     }
 
     public function create(Environment $environment, string $branch, bool $createStages = true): Build
@@ -41,14 +36,64 @@ class BuildService
             ->setNumber($this->getBuildNumber($environment))
             ->setStatus(Build::STATUS_PENDING)
             ->setBranch($branch)
-            ->setCreatedAt(new \DateTimeImmutable())
-        ;
+            ->setCreatedAt(new \DateTimeImmutable());
 
         if ($createStages === true) {
             $this->createStages($build);
         }
 
         return $build;
+    }
+
+    private function getBuildNumber(Environment $environment): int
+    {
+        $sql = 'SELECT IFNULL(MAX(build_number), 0) + 1 AS new_build_number FROM build WHERE build_environment = ?';
+        return intval($this->getEntityManager()->getConnection()->fetchOne($sql, [$environment->getId()]));
+    }
+
+    private function createStages(Build $build): void
+    {
+        $buildConfig = $build->getConfig();
+
+        // Defined Stages
+        foreach ($buildConfig->getStages() as $stageConfig) {
+            $stage = new BuildStage();
+            $stage
+                ->setBuild($build)
+                ->setName($stageConfig['name'])
+                ->setStatus(BuildStage::STATUS_PENDING);
+
+            if (isset($stageConfig['docker'])) {
+                $stage->setDocker(EnvVars::replace($stageConfig['docker'], $build->getConfig()->getEnvVars()));
+            }
+
+            if (isset($stageConfig['steps']) && is_array($stageConfig['steps'])) {
+                foreach ($stageConfig['steps'] as $stepConfig) {
+                    if (isset($stepConfig[BuildStageStep::TYPE_CMD])) {
+                        $step = new BuildStageStep();
+                        $step
+                            ->setStage($stage)
+                            ->setType(BuildStageStep::TYPE_CMD)
+                            ->setDefinition($stepConfig[BuildStageStep::TYPE_CMD])
+                            ->setStatus(BuildStageStep::STATUS_PENDING);
+                        $stage->addStep($step);
+                    }
+                }
+            }
+
+            $build->addStage($stage);
+        }
+    }
+
+    /**
+     * @return Build[]
+     */
+    public function getBuilds(Environment $environment): array
+    {
+        $repository = $this->entityManager->getRepository(Build::class);
+        return $repository->findBy([
+            'environment' => $environment,
+        ], ['number' => 'DESC']);
     }
 
     public function delete(Build $build): void
@@ -64,16 +109,14 @@ class BuildService
             ->setCommitHash($build->getCommitHash())
             ->setCommitMessage($build->getCommitMessage())
             ->setRollbackNumber($build->getNumber())
-            ->setRequestedBy($requestedBy)
-        ;
+            ->setRequestedBy($requestedBy);
 
         foreach ($build->getStages() as $stage) {
             $newStage = new BuildStage();
             $newStage
                 ->setBuild($newBuild)
                 ->setName($stage->getName())
-                ->setStatus(BuildStage::STATUS_SUCCESSFUL)
-            ;
+                ->setStatus(BuildStage::STATUS_SUCCESSFUL);
             $newBuild->addStage($newStage);
         }
 
@@ -83,18 +126,19 @@ class BuildService
         $this->entityManager->flush();
     }
 
-    public function build(Build $build, string $repositoryPath, string $repositoryPathOnHost)
+    public function build(Build $build, string $repositoryPath, string $repositoryPathOnHost): void
     {
+        $failedStages = 0;
         $buildConfig = $build->getConfig();
 
         foreach ($build->getStages() as $stage) {
             $stage
                 ->setStartedAt(new \DateTimeImmutable())
-                ->setStatus(BuildStage::STATUS_RUNNING)
-            ;
+                ->setStatus(BuildStage::STATUS_RUNNING);
             $this->entityManager->flush();
 
             try {
+                $failedSteps = 0;
                 foreach ($stage->getSteps() as $step) {
                     $startTime = time();
                     if ($stage->getDocker()) {
@@ -111,26 +155,33 @@ class BuildService
                         $process
                             ->setEnv($buildConfig->getEnvVars())
                             ->setWorkingDirectory($repositoryPath)
-                            ->setTimeout(0)
-                        ;
+                            ->setTimeout(0);
 
                         $process->run();
                         $step
                             ->setStdOut($process->getOutput())
                             ->setStdErr($process->getErrorOutput())
-                            ->setStatus(BuildStageStep::STATUS_FAILED)
-                        ;
+                            ->setStatus(BuildStageStep::STATUS_FAILED);
 
                         if ($process->isSuccessful()) {
                             $step->setStatus(BuildStageStep::STATUS_SUCCESSFUL);
                         }
                     }
+
                     $step->setTime(time() - $startTime);
+                    if ($step->getStatus() === BuildStageStep::STATUS_FAILED) {
+                        $failedSteps++;
+                    }
                 }
+
                 $stage->setStatus(BuildStage::STATUS_SUCCESSFUL);
+                if ($failedSteps !== 0) {
+                    $failedStages++;
+                    $stage->setStatus(BuildStage::STATUS_FAILED);
+                }
             } catch (\Exception $e) {
                 $stage->setStatus(BuildStage::STATUS_FAILED);
-                if (isset($step) && $step instanceof BuildStageStep) {
+                if ($step instanceof BuildStageStep) {
                     $step->setStatus(BuildStageStep::STATUS_FAILED);
                 }
             } finally {
@@ -138,47 +189,10 @@ class BuildService
                 $this->entityManager->flush();
             }
         }
-    }
 
-    protected function createStages(Build $build)
-    {
-        $buildConfig = $build->getConfig();
-
-        // Defined Stages
-        foreach ($buildConfig->getStages() as $stageConfig) {
-            $stage = new BuildStage();
-            $stage
-                ->setBuild($build)
-                ->setName($stageConfig['name'])
-                ->setStatus(BuildStage::STATUS_PENDING)
-            ;
-
-            if (isset($stageConfig['docker'])) {
-                $stage->setDocker(EnvVars::replace($stageConfig['docker'], $build->getConfig()->getEnvVars()));
-            }
-
-            if (isset($stageConfig['steps']) && is_array($stageConfig['steps'])) {
-                foreach ($stageConfig['steps'] as $stepConfig) {
-                    if (isset($stepConfig[BuildStageStep::TYPE_CMD])) {
-                        $step = new BuildStageStep();
-                        $step
-                            ->setStage($stage)
-                            ->setType(BuildStageStep::TYPE_CMD)
-                            ->setDefinition($stepConfig[BuildStageStep::TYPE_CMD])
-                            ->setStatus(BuildStageStep::STATUS_PENDING)
-                        ;
-                        $stage->addStep($step);
-                    }
-                }
-            }
-
-            $build->addStage($stage);
+        if ($failedStages !== 0) {
+            $build->setStatus(Build::STATUS_FAILED);
         }
-    }
-
-    protected function getBuildNumber(Environment $environment): int
-    {
-        $sql = 'SELECT IFNULL(MAX(build_number), 0) + 1 AS new_build_number FROM build WHERE build_environment = ?';
-        return (int) $this->entityManager->getConnection()->fetchColumn($sql, [$environment->getId()]);
+        $this->entityManager->flush();
     }
 }
